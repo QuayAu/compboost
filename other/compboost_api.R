@@ -14,17 +14,21 @@ cboost = Compboost$new(mtcars, "mpg", loss = QuadraticLoss$new())
 # Should throw an error:
 cboost$train(10)
 
-cboost$addBaselearner("wt", "spline", PSplineBlearnerFactory, degree = 3, 
+cboost$addBaselearner("wt", "spline", PSplineBlearner, degree = 3, 
 	knots = 10, penalty = 2, differences = 2)
 
-cboost$addBaselearner("mpg_cat", "linear", PolynomialBlearnerFactory, degree = 1, intercept = FALSE)
+cboost$addBaselearner("mpg_cat", "linear", PolynomialBlearner, degree = 1, intercept = FALSE)
 
 # Error should apprear:
-cboost$addBaselearner(c("hp", "wt"), "spline", PSplineBlearnerFactory, degree = 3, 
+cboost$addBaselearner(c("hp", "wt"), "spline", PSplineBlearner, degree = 3, 
 	knots = 10, penalty = 2, differences = 2)
 
-cboost$addBaselearner(c("hp", "wt"), "linear", PolynomialBlearnerFactory, degree = 1, intercept = TRUE)
-cboost$addBaselearner("hp", "quadratic", PolynomialBlearnerFactory, degree = 2, intercept = TRUE)
+# cboost$addBaselearner(c("hp", "wt"), "linear", PolynomialBlearner, degree = 1, intercept = TRUE)
+cboost$addBaselearner("hp", "cubic", PolynomialBlearner, degree = 3, intercept = TRUE)
+cboost$addBaselearner("hp", "quadratic", PolynomialBlearner, degree = 2, intercept = TRUE)
+cboost$addBaselearner("hp", "linear", PolynomialBlearner, degree = 1, intercept = TRUE)
+# cboost$addBaselearner("hp", "spline", PSplineBlearner, degree = 3, 
+# 	knots = 10, penalty = 2, differences = 2)
 
 cboost$addLogger(logger = TimeLogger, use.as.stopper = FALSE, logger.id = "time", max.time = 0, time.unit = "microseconds")
 
@@ -58,6 +62,10 @@ cboost$plot("hp_quadratic")
 cboost$plot("hp_quadratic", iters = c(100, 500, 1000, 2000))
 cboost$plot("hp_quadratic", iters = c(1000, 2000))
 
+cboost$plotFeature("hp")
+cboost$plotFeature("hp_linear")
+cboost$plotFeature("hp_quadratic")
+cboost$plotFeature("hp_cubic")
 
 cboost$plot("wt_spline", iters = c(100, 500, 1000, 2000, 10000), from = 2, to = 4) +
 labs(title = "Effect of Weight", subtitle = "Additive contribution of linear predictor") +

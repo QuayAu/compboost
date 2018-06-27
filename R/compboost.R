@@ -541,6 +541,131 @@ Compboost = R6::R6Class("Compboost",
 
 			return(gg)
 		},
+		plotFeature = function (feature = NULL, iters = NULL, from = NULL, to = NULL, length.out = 1000) {
+
+			if (is.null(self$model)) {
+				stop("Model needs to be trained first.")
+			}
+			checkmate::assertIntegerish(iters, min.len = 1, any.missing = FALSE, null.ok = TRUE)
+			checkmate::assertCharacter(feature, len = 1, null.ok = TRUE)
+
+			# browser()
+
+			feat.names = lapply(private$bl.list, function (ll) {
+				feat = ll$feature
+				if (length(feat) == 1) {
+					return (feat)
+				} else {
+					if (feature %in% feat) {
+						stop("Plotting feature effects is just supported for univariate learner.")
+					}
+					return (NULL)
+				}
+			})
+
+			feat.learners = names(feat.names)[unlist(feat.names) == feature]
+			feat.learners = feat.learners[feat.learners %in% self$selected()]
+
+			if (is.null(feature)) {
+				stop("Please specify a valid feature.")
+			}
+			if (! feature %in% unlist(feat.names)) {
+				stop("Your requested feature is not available.")
+			}
+			if (length(feat.learners) == 0) {
+				stop("Your feature wasn't selected.")
+			}
+			# Check if selected base-learner includes the proposed one + check if iters is big enough:
+			iter.min = which(self$selected() %in% feat.learners)[1]
+			if (any(iters < iter.min)) {
+				warning("Requested base-learner plus feature was first selected at iteration ", iter.min)
+			}
+
+			checkmate::assertNumeric(x = self$data[[feature]], min.len = 2, null.ok = FALSE)
+			checkmate::assertNumeric(from, lower =  min(self$data[[feature]]), upper = max(self$data[[feature]]), len = 1, null.ok = TRUE)
+			checkmate::assertNumeric(to, lower =  min(self$data[[feature]]), upper = max(self$data[[feature]]), len = 1, null.ok = TRUE)
+
+			if (is.null(from)) { 				
+				from = min(self$data[[feature]])
+			}
+			if (is.null(to)) {
+				to = max(self$data[[feature]])
+			}
+			if (from >= to) {
+				warning("Argument from is smaller than to, hence the x interval is [to, from].")
+				temp = from
+				from = to
+				to = temp
+			}
+
+			# browser()
+
+			plot.data = as.matrix(seq(from = from, to = to, length.out = length.out))
+			feat.map = list()
+			for (learner in feat.learners) {
+		  	feat.map[[learner]] = private$bl.list[[learner]]$factory$transformData(plot.data)
+		  }
+
+			# Create data.frame for plotting depending if iters is specified:
+			if (! is.null(iters[1])) {
+				preds = lapply(iters, function (x) {
+
+					pred = numeric(length.out)
+
+					for (learner in feat.learners) {
+						par = self$model$getParameterAtIteration(x)[[learner]]
+					  if (! is.null(par)) {
+					  	pred = pred + feat.map[[learner]] %*% par
+					  } else {
+					  	pred = pred + rep(0, length.out)
+					  }
+				  }
+				  return (pred)
+				})
+				names(preds) = iters
+
+				df.plot = data.frame(
+					effect    = unlist(preds),
+					iteration = as.factor(rep(iters, each = length.out)),
+					feature   = plot.data
+					)
+
+				gg = ggplot(df.plot, aes(feature, effect, color = iteration))
+
+			} else {
+
+				pred = numeric(length.out)
+
+				for (learner in feat.learners) {
+					par = self$coef()[[learner]]
+				  if (! is.null(par)) {
+				  	pred = pred + feat.map[[learner]] %*% par
+				  } else {
+				  	pred = pred + rep(0, length.out)
+				  }
+				}
+
+				df.plot = data.frame(
+					effect  = pred,
+					feature = plot.data
+					)
+
+				gg = ggplot(df.plot, aes(feature, effect))
+			}
+
+			gg = gg + 
+			  geom_line() + 
+			  geom_rug(data = self$data, aes_string(x = feature), inherit.aes = FALSE, 
+			  	alpha = 0.8) + 
+			  xlab(feature) + 
+			  xlim(from, to) +
+			  ylab("Additive Contribution") + 
+			  	  labs(title = paste0("Effect of ", feature), 
+		          subtitle = "Additive contribution of cumulated predictors")
+
+			return(gg)
+
+		},
 		getFactoryNames = function () {
 			# return(lapply(private$bl.list, function (bl) bl[[1]]$target$getIdentifier()))
 			return(names(private$bl.list))
