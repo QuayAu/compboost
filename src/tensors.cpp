@@ -88,7 +88,7 @@ std::map<std::string, arma::mat>  centerDesignMatrix (const arma::mat& X1, const
 }
 
 
-arma::vec trapezWeights (const arma::mat& time_points)
+arma::mat trapezWeights (const arma::mat& time_points)
 {
   /// Get Differences of the current function
   arma::mat t_diffs = arma::diff( time_points, 1, 1) ;

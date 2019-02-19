@@ -361,6 +361,7 @@ Compboost = R6::R6Class("Compboost",
         assertRcppClass(target, "Response")
         
         if(class(target)[1] == "Rcpp_ResponseFDA"){
+          # clone data FIXME find better implementation through pointers
           data = data[rep(seq_len(nrow(data)), each = ncol(target$getGrid())),]
         }
         if (nrow(target$getResponse()) != nrow(data))
@@ -390,6 +391,28 @@ Compboost = R6::R6Class("Compboost",
       # Initialize new base-learner factory list. All factories which are defined in
       # `addBaselearners` are registered here:
       self$bl_factory_list = BlearnerFactoryList$new()
+      
+      # add a bols(t) learner for FDA case
+      if(class(target)[1] == "Rcpp_ResponseFDA"){
+        
+        # FIXME invertability of bols(t)
+        blt = "t"
+        blt_source = InMemoryData$new(as.matrix(self$response$getGrid()), blt)
+        blt_target = InMemoryData$new()
+        
+        private$bl_list[[blt]] = list()
+        private$bl_list[[blt]]$source = blt_source
+        private$bl_list[[blt]]$feature = blt
+        private$bl_list[[blt]]$target = blt_target
+        private$bl_list[[blt]]$factory = BaselearnerPolynomial$new(private$bl_list[[blt]]$source, 
+                                                                   private$bl_list[[blt]]$target, 
+                                                                   "", 
+                                                                   list(degree = 1, intercept = FALSE))
+        
+        self$bl_factory_list$registerFactory(private$bl_list[[blt]]$factory)
+        private$bl_list[[blt]]$source = NULL
+
+      }
 
     },
     addLogger = function(logger, use_as_stopper = FALSE, logger_id, ...) {
@@ -426,6 +449,15 @@ Compboost = R6::R6Class("Compboost",
           private$addSingleNumericBl(data_columns, feature, id, id_fac, bl_factory, data_source, data_target, ...)
         }
       } else {
+        # FDA case - kronecker each learn with grid baselearner
+        data_columns = self$data[, feature, drop = FALSE]
+        id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
+        
+        if (ncol(data_columns) == 1 && !is.numeric(data_columns[, 1])) {
+          private$addSingleCatBl(data_columns, feature, id, id_fac, bl_factory, data_source, data_target, ...)
+        }	else {
+          private$addSingleNumericBl(data_columns, feature, id, id_fac, bl_factory, data_source, data_target, ...)
+        }
         
       }
     },
