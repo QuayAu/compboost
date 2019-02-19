@@ -361,7 +361,7 @@ Compboost = R6::R6Class("Compboost",
         assertRcppClass(target, "Response")
         
         if(class(target)[1] == "Rcpp_ResponseFDA"){
-          data = data[rep(seq_len(nrow(data)), each = length(target$getGrid())),]
+          data = data[rep(seq_len(nrow(data)), each = ncol(target$getGrid())),]
         }
         if (nrow(target$getResponse()) != nrow(data))
           stop("Response must have same number of observations as the given dataset")

@@ -87,23 +87,24 @@ std::map<std::string, arma::mat>  centerDesignMatrix (const arma::mat& X1, const
   /// return X1_out;
 }
 
-arma::vec trapezWeights (const arma::vec& time_points)
+
+arma::vec trapezWeights (const arma::mat& time_points)
 {
-
   /// Get Differences of the current function
-  arma::vec t_diffs = arma::diff( time_points ) ;
-  arma::vec weights = time_points;
-
+  arma::mat t_diffs = arma::diff( time_points, 1, 1) ;
+  arma::mat weights = time_points;
+  
+  
   /// change the border values
-  weights(arma::span(0)) = t_diffs(arma::span(0));
-  weights(arma::span(weights.size()-1)) = t_diffs(arma::span(t_diffs.size()-1));
-
+  weights.col(0) = t_diffs.col(0);
+  weights.col(weights.n_cols-1) = t_diffs.col(t_diffs.n_cols-1);
+  
   /// divide all by half except for beginning and end, add to get mean per value
-  arma::vec t_diff_halfs = t_diffs / 2;
-
-  weights(arma::span(1,weights.size()-2)) =  t_diff_halfs(arma::span(1,t_diff_halfs.size()-1)) +
-    t_diff_halfs(arma::span(0,t_diff_halfs.size()-2));
-
+  arma::mat t_diff_halfs = t_diffs / 2;
+  
+  weights.cols(1,(weights.n_cols-2)) =  t_diff_halfs.cols(1,t_diff_halfs.n_cols-1) +
+    t_diff_halfs.cols(0,t_diff_halfs.n_cols-2);
+  
   return weights;
 }
 
