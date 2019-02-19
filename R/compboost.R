@@ -414,15 +414,103 @@ Compboost = R6::R6Class("Compboost",
           private$bl_list[[i]] = NULL
         }
       }
-
-      data_columns = self$data[, feature, drop = FALSE]
-      id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
-
-      if (ncol(data_columns) == 1 && !is.numeric(data_columns[, 1])) {
-        private$addSingleCatBl(data_columns, feature, id, id_fac, bl_factory, data_source, data_target, ...)
-      }	else {
-        private$addSingleNumericBl(data_columns, feature, id, id_fac, bl_factory, data_source, data_target, ...)
+      
+      # Check if the response functional data
+      if(class(self$response) != "Rcpp_ResponseFDA"){
+        data_columns = self$data[, feature, drop = FALSE]
+        id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
+  
+        if (ncol(data_columns) == 1 && !is.numeric(data_columns[, 1])) {
+          private$addSingleCatBl(data_columns, feature, id, id_fac, bl_factory, data_source, data_target, ...)
+        }	else {
+          private$addSingleNumericBl(data_columns, feature, id, id_fac, bl_factory, data_source, data_target, ...)
+        }
+      } else {
+        
       }
+    },
+    CombineBaselearners = function(bl1, bl2, bl_factory = BaselearnerPolynomial, keep = FALSE){
+      if(! bl1 %in% easy_boost$getBaselearnerNames()){
+        stop("Bl1 is not a registered Baselearner.")
+      }
+      if(! bl2 %in% easy_boost$getBaselearnerNames()){
+        stop("Bl2 is not a registered Baselearner.")
+      }
+      if(!is.logical(keep)){
+        stop("keep must be logical.")
+      }
+      if(class(private$bl_list[[bl1]]$factory) != class(private$bl_list[[bl2]]$factory)){
+        stop("Baselearners must be of the same kind to be combined.")
+      }
+      
+      # Get Design Matrices from both learners
+      bl1_design_mat = private$bl_list[[bl1]]$factory$getData()
+      bl2_design_mat = private$bl_list[[bl2]]$factory$getData()
+  
+      bln = paste0(bl1,"_%_",bl2)
+      bln_design_mat = as.matrix(rowwiseTensor(bl1_design_mat, bl2_design_mat))
+      
+      bln_source = InMemoryData$new(as.matrix(bln_design_mat), bln)
+      bln_target = InMemoryData$new()
+      
+      private$bl_list[[bln]] = list()
+      private$bl_list[[bln]]$source = bln_source
+      private$bl_list[[bln]]$feature = bln
+      private$bl_list[[bln]]$target = bln_target
+      private$bl_list[[bln]]$factory = BaselearnerPolynomial$new(private$bl_list[[bln]]$source, 
+                                                                 private$bl_list[[bln]]$target, 
+                                                                 "", 
+                                                                 list(degree = 1, intercept = FALSE))
+
+      self$bl_factory_list$registerFactory(private$bl_list[[bln]]$factory)
+      private$bl_list[[bln]]$source = NULL
+      
+      
+      if(!keep){
+        private$bl_list[[bl1]] = NULL
+        private$bl_list[[bl2]] = NULL
+      }
+        
+    },CenterBaselearner = function(bl_target, bl_center){
+      if(! bl_target %in% easy_boost$getBaselearnerNames()){
+        stop("bl_target is not a registered Baselearner.")
+      }
+      if(! bl_center %in% easy_boost$getBaselearnerNames()){
+        stop("bl_center is not a registered Baselearner.")
+      }
+      if(class(private$bl_list[[bl_target]]$factory) != class(private$bl_list[[bl_center]]$factory)){
+        stop("Baselearners must be of the same kind to be combined.")
+      }
+      
+      # Get Design Matrices from both learners
+      bl_target_design_mat = private$bl_list[[bl_target]]$factory$getData()
+      bl_center_design_mat = private$bl_list[[bl_center]]$factory$getData()
+      
+      blc = paste0(bl_target,"_|_",bl_center)
+      
+      # calculate QR-decomposition
+      qr_x1x2 = qr(t(bl_target_design_mat)%*%bl_center_design_mat)
+      # get rank, which can be used to 
+      # determine the zero part of R
+      rank_x1x2 <- qr_x1x2$rank
+      # get Q
+      Q <- qr.Q(qr_x1x2, complete = TRUE)
+      # then Z is given by:
+      Z <- Q[, (rank_x1x2 + 1):ncol(Q)]
+      # and the we have    
+      blc_design_mat <- bl_target_design_mat %*% Z
+      
+      
+      blc_source = InMemoryData$new(as.matrix(blc_design_mat), blc)
+      blc_target = InMemoryData$new()
+      
+      private$bl_list[[bl_target]]$source = blc_source
+      private$bl_list[[bl_target]]$feature = blc
+      private$bl_list[[bl_target]]$target = blc_target
+      
+      private$bl_list[[blc]] = private$bl_list[[bl_target]]
+      private$bl_list[[bl_target]] = NULL
+
     },
     train = function(iteration = 100, trace = -1) {
 

@@ -23,6 +23,7 @@
 namespace tensors
 {
 
+
 arma::mat rowWiseKronecker (const arma::mat& A, const arma::mat& B)
 {
   // Variables

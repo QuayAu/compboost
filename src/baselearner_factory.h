@@ -112,6 +112,8 @@ public:
   arma::mat instantiateData (const arma::mat&) const;
 };
 
+
+
 // BaselearnerPSplineFactory:
 // -----------------------------
 

@@ -277,6 +277,7 @@ void ResponseBinaryClassif::setThreshold (const double& new_thresh)
   threshold = new_thresh;
 }
 
+
 // Functional Data Response
 
 ResponseFDA::ResponseFDA (std::vector<std::string>& target_name0, const arma::mat& response0, const arma::mat& grid0)
@@ -375,6 +376,11 @@ arma::mat ResponseFDA::getPredictionTransform (const arma::mat& pred_scores) con
 arma::mat ResponseFDA::getPredictionResponse (const arma::mat& pred_scores) const
 {
   return pred_scores;
+}
+
+arma::mat ResponseFDA::getGrid (const arma::mat& grid) const
+{
+  return grid;
 }
 
 void ResponseFDA::filter (const arma::uvec& idx)

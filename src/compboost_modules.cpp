@@ -1393,6 +1393,7 @@ public:
   }
 };
 
+
 //' Create response object for functional response data.
 //'
 //' \code{ResponseFDA} creates a response object that are used as target during the
@@ -1403,8 +1404,9 @@ public:
 //'
 //' @section Usage:
 //' \preformatted{
-//' ResponseFDA(target_name, response)
-//' ResponseFDA(target_name, response, weights)
+
+//' ResponseFDA$new(target_name, response)
+//' ResponseFDA$new(target_name, response, weights)
 //' }
 //'
 //' @export ResponseFDA
@@ -1427,7 +1429,6 @@ public:
   }
   
 };
-
 
 RCPP_EXPOSED_CLASS(ResponseWrapper)
 RCPP_MODULE (response_module)
@@ -1468,10 +1469,10 @@ RCPP_MODULE (response_module)
   class_<ResponseFDAWrapper> ("ResponseFDA")
     .derives<ResponseWrapper> ("Response")
   
-  .constructor<std::vector<std::string>, arma::mat, arma::mat> ()
-  .constructor<std::vector<std::string>, arma::mat, arma::mat, arma::mat> ()
+     .constructor<std::vector<std::string>, arma::mat, arma::mat> ()
+     .constructor<std::vector<std::string>, arma::mat, arma::mat, arma::mat> ()
   
-  .method("getGrid",           &ResponseFDAWrapper::getGrid, "Get the functional grid.")
+      .method("getGrid",           &ResponseFDAWrapper::getGrid, "Get the functional grid.")
  ;
 }
 

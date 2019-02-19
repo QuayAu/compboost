@@ -822,6 +822,7 @@ NULL
 #' @export ResponseBinaryClassif
 NULL
 
+
 #' Create response object for functional response data.
 #'
 #' \code{ResponseFDA} creates a response object that are used as target during the
@@ -832,8 +833,10 @@ NULL
 #'
 #' @section Usage:
 #' \preformatted{
-#' ResponseFDA(target_name, response)
-#' ResponseFDA(target_name, response, weights)
+
+#' ResponseFDA$new(target_name, response)
+#' ResponseFDA$new(target_name, response, weights)
+
 #' }
 #'
 #' @export ResponseFDA
