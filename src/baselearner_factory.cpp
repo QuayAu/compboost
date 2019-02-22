@@ -232,6 +232,30 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
   }
 }
 
+BaselearnerPSplineFactory::BaselearnerPSplineFactory (std::shared_ptr<data::Data> data_source0, 
+                                                      std::shared_ptr<data::Data> data_target0)
+  : degree ( 0 ),
+    n_knots ( 0 ),
+    penalty ( 0 ),
+    differences ( 0 ),
+    use_sparse_matrices ( 0 )
+{
+  
+  data_source = data_source0;
+  data_target = data_target0;
+  
+ // data_target->penalty_mat = penalty_mat0;
+  
+  data_target->setDataIdentifier(data_source->getDataIdentifier());
+  
+
+  data_target->sparse_data_mat = data_target->getData();
+  data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty * data_target->penalty_mat);
+}
+
+
+
+
 /**
  * \brief Create new `BaselearnerPSpline` object
  *

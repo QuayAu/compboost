@@ -455,6 +455,13 @@ public:
       data_target.getDataObj(), internal_arg_list["degree"], internal_arg_list["n_knots"],
       internal_arg_list["penalty"], internal_arg_list["differences"], TRUE);
   }
+  
+  BaselearnerPSplineFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target)
+  {
+    
+    sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPSplineFactory>(data_source.getDataObj(),
+                                                                                           data_target.getDataObj());
+  }
 
   void summarizeFactory ()
   {

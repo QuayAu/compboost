@@ -395,19 +395,20 @@ Compboost = R6::R6Class("Compboost",
       # add a bols(t) learner for FDA case
       if(class(target)[1] == "Rcpp_ResponseFDA"){
         
-        # FIXME invertability of bols(t)
+        
+        # FIXME invertability of bbs(t)
         blt = "t"
-        blt_source = InMemoryData$new(as.matrix(self$response$getGrid()), blt)
+        id_fac = paste(paste("T", collapse = "_"), blt, sep = "_")
+        blt_source = InMemoryData$new(as.matrix(self$response$getGrid()[1,]), blt)
         blt_target = InMemoryData$new()
         
         private$bl_list[[blt]] = list()
         private$bl_list[[blt]]$source = blt_source
-        private$bl_list[[blt]]$feature = blt
+        private$bl_list[[blt]]$feature = "T"
         private$bl_list[[blt]]$target = blt_target
-        private$bl_list[[blt]]$factory = BaselearnerPolynomial$new(private$bl_list[[blt]]$source, 
-                                                                   private$bl_list[[blt]]$target, 
-                                                                   "", 
-                                                                   list(degree = 1, intercept = FALSE))
+        private$bl_list[[blt]]$factory = BaselearnerPSpline$new(private$bl_list[[blt]]$source, 
+                                                                   private$bl_list[[blt]]$target, id_fac,
+                                                                list(degree = 3, n_knots = 4, penalty = 2, differences = 2))
         
         self$bl_factory_list$registerFactory(private$bl_list[[blt]]$factory)
         private$bl_list[[blt]]$source = NULL
@@ -461,11 +462,11 @@ Compboost = R6::R6Class("Compboost",
         
       }
     },
-    CombineBaselearners = function(bl1, bl2, bl_factory = BaselearnerPolynomial, keep = FALSE){
-      if(! bl1 %in% easy_boost$getBaselearnerNames()){
+    CombineBaselearners = function(bl1, bl2, bl_factory, keep = FALSE, ...){
+      if(! bl1 %in% self$getBaselearnerNames()){
         stop("Bl1 is not a registered Baselearner.")
       }
-      if(! bl2 %in% easy_boost$getBaselearnerNames()){
+      if(! bl2 %in% self$getBaselearnerNames()){
         stop("Bl2 is not a registered Baselearner.")
       }
       if(!is.logical(keep)){
@@ -475,6 +476,7 @@ Compboost = R6::R6Class("Compboost",
         stop("Baselearners must be of the same kind to be combined.")
       }
       
+      browser()
       # Get Design Matrices from both learners
       bl1_design_mat = private$bl_list[[bl1]]$factory$getData()
       bl2_design_mat = private$bl_list[[bl2]]$factory$getData()
@@ -489,10 +491,8 @@ Compboost = R6::R6Class("Compboost",
       private$bl_list[[bln]]$source = bln_source
       private$bl_list[[bln]]$feature = bln
       private$bl_list[[bln]]$target = bln_target
-      private$bl_list[[bln]]$factory = BaselearnerPolynomial$new(private$bl_list[[bln]]$source, 
-                                                                 private$bl_list[[bln]]$target, 
-                                                                 "", 
-                                                                 list(degree = 1, intercept = FALSE))
+      private$bl_list[[bln]]$factory = bl_factory$new(private$bl_list[[bln]]$source, 
+                                                                 private$bl_list[[bln]]$target)
 
       self$bl_factory_list$registerFactory(private$bl_list[[bln]]$factory)
       private$bl_list[[bln]]$source = NULL
@@ -504,10 +504,10 @@ Compboost = R6::R6Class("Compboost",
       }
         
     },CenterBaselearner = function(bl_target, bl_center){
-      if(! bl_target %in% easy_boost$getBaselearnerNames()){
+      if(! bl_target %in% self$getBaselearnerNames()){
         stop("bl_target is not a registered Baselearner.")
       }
-      if(! bl_center %in% easy_boost$getBaselearnerNames()){
+      if(! bl_center %in% self$getBaselearnerNames()){
         stop("bl_center is not a registered Baselearner.")
       }
       if(class(private$bl_list[[bl_target]]$factory) != class(private$bl_list[[bl_center]]$factory)){

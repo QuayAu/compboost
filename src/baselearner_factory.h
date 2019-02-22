@@ -148,6 +148,9 @@ public:
   BaselearnerPSplineFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>,
     const unsigned int&, const unsigned int&, const double&,
     const unsigned int&, const bool&);
+  
+  // Constructor for receiving finished design matrix
+  BaselearnerPSplineFactory (std::shared_ptr<data::Data>, std::shared_ptr<data::Data>);
 
   /// Create new `BaselearnerPSpline` object
   std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
