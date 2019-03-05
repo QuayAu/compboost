@@ -484,20 +484,33 @@ Compboost = R6::R6Class("Compboost",
       bln = paste0(bl1,"_%_",bl2)
       bln_design_mat = as.matrix(rowwiseTensor(bl1_design_mat, bl2_design_mat))
       
-      bln_source = InMemoryData$new(as.matrix(bln_design_mat), bln)
-      bln_target = InMemoryData$new()
+      data_source = InMemoryData$new(bln_design_mat, "")
+      data_target = InMemoryData$new()
       
-      private$bl_list[[bln]] = list()
-      private$bl_list[[bln]]$source = bln_source
-      private$bl_list[[bln]]$feature = bln
-      private$bl_list[[bln]]$target = bln_target
-      private$bl_list[[bln]]$factory = bl_factory$new(private$bl_list[[bln]]$source, 
-                                                                 private$bl_list[[bln]]$target)
+      instantiateDataFun = function (X) {
+        return(X)
+      }
+      # Ordinary least squares estimator:
+      trainFun = function (y, X) {
+        return(solve(t(X) %*% X) %*% t(X) %*% y)
+      }
+      predictFun = function (model, newdata) {
+        return(as.matrix(newdata %*% model))
+      }
+      extractParameter = function (model) {
+        return(as.matrix(model))
+      }
+      
+      id_fac = ""
 
-      self$bl_factory_list$registerFactory(private$bl_list[[bln]]$factory)
-      private$bl_list[[bln]]$source = NULL
-      
-      
+      private$bl_list[[bln]] = list()
+      private$bl_list[[bln]]$source = data_source$new(bln_design_mat, "")
+      private$bl_list[[bln]]$feature = bln
+      private$bl_list[[bln]]$target = data_target$new()
+      private$bl_list[[bln]]$factory = BaselearnerCustom$new(data_source, data_target,
+                                                             list(instantiate_fun = instantiateDataFun, train_fun = trainFun,
+                                                                  predict_fun = predictFun, param_fun = extractParameter))
+
       if(!keep){
         private$bl_list[[bl1]] = NULL
         private$bl_list[[bl2]] = NULL
@@ -763,6 +776,7 @@ Compboost = R6::R6Class("Compboost",
     },
     addSingleNumericBl = function(data_columns, feature, id_fac, id, bl_factory, data_source, data_target, ...) {
 
+      
       private$bl_list[[id]] = list()
       private$bl_list[[id]]$source = data_source$new(as.matrix(data_columns), paste(feature, collapse = "_"))
       private$bl_list[[id]]$feature = feature

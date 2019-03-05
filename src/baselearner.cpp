@@ -341,6 +341,63 @@ arma::mat BaselearnerPSpline::predict (std::shared_ptr<data::Data> newdata) cons
 BaselearnerPSpline::~BaselearnerPSpline () {}
 
 
+// BaselearnerTargetOnly:
+// -----------------------
+
+BaselearnerTargetOnly::BaselearnerTargetOnly (std::shared_ptr<data::Data> data, const std::string& identifier,
+                                              const unsigned int& degree, const bool& intercept)
+  : degree ( degree ),
+    intercept ( intercept )
+{
+  // Called from parent class 'Baselearner':
+  Baselearner::setData(data);
+  Baselearner::setIdentifier(identifier);
+}
+
+// Copy member:
+Baselearner* BaselearnerTargetOnly::clone ()
+{
+  Baselearner* newbl = new BaselearnerTargetOnly(*this);
+  newbl->copyMembers(this->parameter, this->blearner_identifier, this->sh_ptr_data);
+  
+  return newbl;
+}
+
+// // Transform data:
+// arma::mat BaselearnerTargetOnly::instantiateData ()
+// {
+//
+//   return arma::pow(*sh_ptr_data, degree);
+// }
+//
+// Transform data. This is done twice since it makes the prediction
+// of the whole compboost object so much easier:
+arma::mat BaselearnerTargetOnly::instantiateData (const arma::mat& newdata) const
+{
+  return newdata;
+}
+
+// Train the learner:
+void BaselearnerTargetOnly::train (const arma::mat& response)
+{
+  // parameter = arma::solve(sh_ptr_data->getData(), response);
+  parameter = sh_ptr_data->XtX_inv * sh_ptr_data->getData().t() * response;
+}
+
+// Predict the learner:
+arma::mat BaselearnerTargetOnly::predict () const
+{
+  return sh_ptr_data->getData() * parameter;
+}
+arma::mat BaselearnerTargetOnly::predict (std::shared_ptr<data::Data> newdata) const
+{
+  return instantiateData(newdata->getData()) * parameter;
+}
+
+// Destructor:
+BaselearnerTargetOnly::~BaselearnerTargetOnly () {}
+
+
 // BaselearnerCustom:
 // -----------------------
 

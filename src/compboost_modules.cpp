@@ -456,12 +456,6 @@ public:
       internal_arg_list["penalty"], internal_arg_list["differences"], TRUE);
   }
   
-  BaselearnerPSplineFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target)
-  {
-    
-    sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPSplineFactory>(data_source.getDataObj(),
-                                                                                           data_target.getDataObj());
-  }
 
   void summarizeFactory ()
   {
@@ -473,6 +467,146 @@ public:
     Rcpp::Rcout << "\t- Factory creates the following base-learner: " << sh_ptr_blearner_factory->getBaselearnerType() << std::endl;
   }
 };
+
+
+
+//' Base-learner factory to make TargetOnly regression
+//'
+//' \code{BaselearnerTargetOnly} creates a TargetOnly base-learner factory
+//'  object which can be registered within a base-learner list and then used
+//'  for training.
+//'
+//' @format \code{\link{S4}} object.
+//' @name BaselearnerTargetOnly
+//'
+//' @section Usage:
+//' \preformatted{
+//' BaselearnerTargetOnly$new(data_source, data_target, list(degree, intercept))
+//' BaselearnerTargetOnly$new(data_source, data_target, blearner_type, list(degree, intercept))
+//' }
+//'
+//' @section Arguments:
+//' \describe{
+//' \item{\code{data_source} [\code{Data} Object]}{
+//'   Data object which contains the source data.
+//' }
+//' \item{\code{data_target} [\code{Data} Object]}{
+//'   Data object which gets the transformed source data.
+//' }
+//' \item{\code{degree} [\code{integer(1)}]}{
+//'   This argument is used for transforming the source data. Each element is
+//'   taken to the power of the \code{degree} argument.
+//' }
+//' \item{\code{intercept} [\code{logical(1)}]}{
+//'   Indicating whether an intercept should be added or not. Default is set to TRUE.
+//' }
+//' }
+//'
+//'
+//' @section Details:
+//'   The TargetOnly base-learner factory takes any matrix which the user wants
+//'   to pass the number of columns indicates how much parameter are estimated.
+//'   Note that the intercept isn't added by default. To get an intercept add a
+//'   column of ones to the source data matrix.
+//'
+//'   This class is a wrapper around the pure \code{C++} implementation. To see
+//'   the functionality of the \code{C++} class visit
+//'   \url{https://schalkdaniel.github.io/compboost/cpp_man/html/classblearnerfactory_1_1_TargetOnly_blearner_factory.html}.
+//'
+//' @section Fields:
+//'   This class doesn't contain public fields.
+//'
+//' @section Methods:
+//' \describe{
+//' \item{\code{getData()}}{Get the data matrix of the target data which is used
+//'   for modeling.}
+//' \item{\code{transformData(X)}}{Transform a data matrix as defined within the
+//'   factory. The argument has to be a matrix with one column.}
+//' \item{\code{summarizeFactory()}}{Summarize the base-learner factory object.}
+//' }
+//' @examples
+//' # Sample data:
+//' data_mat = cbind(1:10)
+//'
+//' # Create new data object:
+//' data_source = InMemoryData$new(data_mat, "my_data_name")
+//' data_target1 = InMemoryData$new()
+//' data_target2 = InMemoryData$new()
+//'
+//' # Create new linear base-learner factory:
+//' lin_factory = BaselearnerTargetOnly$new(data_source, data_target1,
+//'   list(degree = 2, intercept = FALSE))
+//' lin_factory_int = BaselearnerTargetOnly$new(data_source, data_target2,
+//'   list(degree = 2, intercept = TRUE))
+//'
+//' # Get the transformed data:
+//' lin_factory$getData()
+//' lin_factory_int$getData()
+//'
+//' # Summarize factory:
+//' lin_factory$summarizeFactory()
+//'
+//' # Transform data manually:
+//' lin_factory$transformData(data_mat)
+//' lin_factory_int$transformData(data_mat)
+//'
+//' @export BaselearnerTargetOnly
+class BaselearnerTargetOnlyFactoryWrapper : public BaselearnerFactoryWrapper
+{
+private:
+  Rcpp::List internal_arg_list = Rcpp::List::create(
+    Rcpp::Named("degree") = 1,
+    Rcpp::Named("intercept") = true
+  );
+  
+public:
+  
+  BaselearnerTargetOnlyFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target,
+                                       Rcpp::List arg_list)
+  {
+    // Match defaults with custom arguments:
+    internal_arg_list = helper::argHandler(internal_arg_list, arg_list, TRUE);
+    
+    // We need to converse the SEXP from the element to an integer:
+    int degree = internal_arg_list["degree"];
+    
+    std::string blearner_type_temp = "TargetOnly_degree_" + std::to_string(degree);
+    
+    sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerTargetOnlyFactory>(blearner_type_temp, data_source.getDataObj(),
+                                                                                              data_target.getDataObj(), internal_arg_list["degree"], internal_arg_list["intercept"]);
+  }
+  
+  BaselearnerTargetOnlyFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target,
+                                       const std::string& blearner_type, Rcpp::List arg_list)
+  {
+    internal_arg_list = helper::argHandler(internal_arg_list, arg_list, TRUE);
+    
+    sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerTargetOnlyFactory>(blearner_type, data_source.getDataObj(),
+                                                                                              data_target.getDataObj(), internal_arg_list["degree"], internal_arg_list["intercept"]);
+  }
+  
+  void summarizeFactory ()
+  {
+    // We need to converse the SEXP from the element to an integer:
+    int degree = internal_arg_list["degree"];
+    
+    if (degree == 1) {
+      Rcpp::Rcout << "Linear base-learner factory:" << std::endl;
+    }
+    if (degree == 2) {
+      Rcpp::Rcout << "Quadratic base-learner factory:" << std::endl;
+    }
+    if (degree == 3) {
+      Rcpp::Rcout << "Cubic base-learner factory:" << std::endl;
+    }
+    if (degree > 3) {
+      Rcpp::Rcout << "TargetOnly base-learner of degree " << degree << " factory:" << std::endl;
+    }
+    Rcpp::Rcout << "\t- Name of the used data: " << sh_ptr_blearner_factory->getDataIdentifier() << std::endl;
+    Rcpp::Rcout << "\t- Factory creates the following base-learner: " << sh_ptr_blearner_factory->getBaselearnerType() << std::endl;
+  }
+};
+
 
 //' Create custom base-learner factory by using R functions.
 //'
@@ -785,6 +919,14 @@ RCPP_MODULE (baselearner_factory_module)
     .method("summarizeFactory", &BaselearnerPSplineFactoryWrapper::summarizeFactory, "Summarize Factory")
   ;
 
+  class_<BaselearnerTargetOnlyFactoryWrapper> ("BaselearnerTargetOnly")
+    .derives<BaselearnerFactoryWrapper> ("Baselearner")
+    .constructor<DataWrapper&, DataWrapper&, Rcpp::List> ()
+    .constructor<DataWrapper&, DataWrapper&, std::string, Rcpp::List> ()
+  
+  .method("summarizeFactory", &BaselearnerTargetOnlyFactoryWrapper::summarizeFactory, "Summarize Factory")
+  ;
+  
   class_<BaselearnerCustomFactoryWrapper> ("BaselearnerCustom")
     .derives<BaselearnerFactoryWrapper> ("Baselearner")
     .constructor<DataWrapper&, DataWrapper&, Rcpp::List> ()

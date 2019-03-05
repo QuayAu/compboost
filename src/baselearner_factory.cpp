@@ -232,27 +232,6 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
   }
 }
 
-BaselearnerPSplineFactory::BaselearnerPSplineFactory (std::shared_ptr<data::Data> data_source0, 
-                                                      std::shared_ptr<data::Data> data_target0)
-  : degree ( 0 ),
-    n_knots ( 0 ),
-    penalty ( 0 ),
-    differences ( 0 ),
-    use_sparse_matrices ( 0 )
-{
-  
-  data_source = data_source0;
-  data_target = data_target0;
-  
- // data_target->penalty_mat = penalty_mat0;
-  
-  data_target->setDataIdentifier(data_source->getDataIdentifier());
-  
-
-  data_target->sparse_data_mat = data_target->getData();
-  data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty * data_target->penalty_mat);
-}
-
 
 
 
@@ -335,6 +314,78 @@ arma::mat BaselearnerPSplineFactory::instantiateData (const arma::mat& newdata) 
   arma::mat out = splines::createSplineBasis (temp, degree, data_target->knots);
   return out;
 }
+
+/// ---------------------------------------------------------------------------------------------- ///
+
+BaselearnerTargetOnlyFactory::BaselearnerTargetOnlyFactory (const std::string& blearner_type0,
+                                                            std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0, const unsigned int& degree,
+                                                            const bool& intercept)
+  : degree ( degree ),
+    intercept ( intercept )
+{
+  blearner_type = blearner_type0;
+  
+  data_source = data_source0;
+  data_target = data_target0;
+  
+  // Make sure that the data identifier is setted correctly:
+  data_target->setDataIdentifier(data_source->getDataIdentifier());
+  
+  // Get the data of the source, transform it and write it into the target:
+  data_target->setData(instantiateData(data_source->getData()));
+  data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData());
+  
+  // blearner_type = blearner_type + " with degree " + std::to_string(degree);
+}
+
+std::shared_ptr<blearner::Baselearner> BaselearnerTargetOnlyFactory::createBaselearner (const std::string& identifier)
+{
+  std::shared_ptr<blearner::Baselearner>  sh_ptr_blearner = std::make_shared<blearner::BaselearnerTargetOnly>(data_target, identifier, degree, intercept);
+  sh_ptr_blearner->setBaselearnerType(blearner_type);
+  
+  // // Check if the data is already set. If not, run 'instantiateData' from the
+  // // baselearner:
+  // if (! is_data_instantiated) {
+  //   data = sh_ptr_blearner->instantiateData();
+  //
+  //   is_data_instantiated = true;
+  //
+  //   // update baselearner type:
+  //   blearner_type = blearner_type + " with degree " + std::to_string(degree);
+  // }
+  return sh_ptr_blearner;
+}
+
+/**
+ * \brief Data getter which always returns an arma::mat
+ *
+ * This function is important to have a unified interface to access the data
+ * matrices. Especially for predicting we have to get the data of each factory
+ * as dense matrix. This is a huge drawback in terms of memory usage. Therefore,
+ * this function should only be used to get temporary matrices which are deleted
+ * when they run out of scope to reduce memory load. Also note that there is a
+ * dispatch with the getData() function of the Data objects which are mostly
+ * called internally.
+ *
+ * \returns `arma::mat` of data used for modelling a single base-learner
+ */
+arma::mat BaselearnerTargetOnlyFactory::getData () const
+{
+  // In the case of p = 1 we have to treat the getData() function differently
+  // due to the saved and already transformed data without intercept. This
+  // is annoying but improves performance of the fitting process.
+    return data_target->getData();
+}
+
+// Transform data. This is done twice since it makes the prediction
+// of the whole compboost object so much easier:
+arma::mat BaselearnerTargetOnlyFactory::instantiateData (const arma::mat& newdata) const
+{
+  return newdata;
+}
+
+/// ---------------------------------------------------------------------------------------------- ///
+
 
 // BaselearnerCustom:
 // -----------------------
@@ -453,3 +504,7 @@ arma::mat BaselearnerCustomCppFactory::instantiateData (const arma::mat& newdata
 
 
 } // namespace blearnerfactory
+
+
+
+

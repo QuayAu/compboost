@@ -141,7 +141,7 @@ private:
 
   /// Flag if sparse matrices should be used:
   const bool use_sparse_matrices;
-
+  
 public:
 
   /// Default constructor of class `PSplineBleanrerFactory`
@@ -149,9 +149,6 @@ public:
     const unsigned int&, const unsigned int&, const double&,
     const unsigned int&, const bool&);
   
-  // Constructor for receiving finished design matrix
-  BaselearnerPSplineFactory (std::shared_ptr<data::Data>, std::shared_ptr<data::Data>);
-
   /// Create new `BaselearnerPSpline` object
   std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
 
@@ -161,6 +158,30 @@ public:
   /// Instantiate the design matrix
   arma::mat instantiateData (const arma::mat&) const;
 };
+
+// BaselearnerPolynomialFactory:
+// -----------------------------
+
+class BaselearnerTargetOnlyFactory : public BaselearnerFactory
+{
+private:
+  
+  const unsigned int degree;
+  bool intercept;
+  
+public:
+  
+  BaselearnerTargetOnlyFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>, const unsigned int&,
+                                const bool&);
+  
+  std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
+  
+  /// Get data used for modeling
+  arma::mat getData() const;
+  
+  arma::mat instantiateData (const arma::mat&) const;
+};
+
 
 // BaselearnerCustomFactory:
 // -----------------------------
