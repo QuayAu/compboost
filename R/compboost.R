@@ -331,6 +331,7 @@ Compboost = R6::R6Class("Compboost",
     model = NULL,
     bl_factory_list = NULL,
     positive_category = NULL,
+    grid_mat = NULL,
     stop_if_all_stoppers_fulfilled = FALSE,
     initialize = function(data, target, optimizer = OptimizerCoordinateDescent$new(), loss, learning_rate = 0.05, oob_fraction = NULL) {
       checkmate::assertDataFrame(data, any.missing = FALSE, min.rows = 1)
@@ -393,26 +394,14 @@ Compboost = R6::R6Class("Compboost",
       self$bl_factory_list = BlearnerFactoryList$new()
       
       # add a bols(t) learner for FDA case
-      if(class(target)[1] == "Rcpp_ResponseFDA"){
+      if(class(self$response)[1] == "Rcpp_ResponseFDA"){
         
-        
-        # FIXME invertability of bbs(t)
-        blt = "t"
-        id_fac = paste(paste("T", collapse = "_"), blt, sep = "_")
-        blt_source = InMemoryData$new(as.matrix(self$response$getGrid()[1,]), blt)
+        blt_source = InMemoryData$new(as.matrix(self$response$getGrid()[1,]), "")
         blt_target = InMemoryData$new()
         
-        private$bl_list[[blt]] = list()
-        private$bl_list[[blt]]$source = blt_source
-        private$bl_list[[blt]]$feature = "T"
-        private$bl_list[[blt]]$target = blt_target
-        private$bl_list[[blt]]$factory = BaselearnerPSpline$new(private$bl_list[[blt]]$source, 
-                                                                   private$bl_list[[blt]]$target, id_fac,
-                                                                list(degree = 3, n_knots = 4, penalty = 2, differences = 2))
+        spline_fact = BaselearnerPSpline$new(blt_source, blt_target, list(degree = 3, n_knots = 25, differences = 2))
         
-        self$bl_factory_list$registerFactory(private$bl_list[[blt]]$factory)
-        private$bl_list[[blt]]$source = NULL
-
+        self$grid_mat = spline_fact$getData()
       }
 
     },
@@ -426,7 +415,8 @@ Compboost = R6::R6Class("Compboost",
         return(0)
       }
     },
-    addBaselearner = function(feature, id, bl_factory, data_source = InMemoryData, data_target = InMemoryData, ...) {
+    addBaselearner = function(feature, id, bl_factory, data_source = InMemoryData, 
+                              data_target = InMemoryData, ...) {
       if (!is.null(self$model)) {
         stop("No base-learners can be added after training is started")
       }
@@ -445,19 +435,28 @@ Compboost = R6::R6Class("Compboost",
         id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
   
         if (ncol(data_columns) == 1 && !is.numeric(data_columns[, 1])) {
-          private$addSingleCatBl(data_columns, feature, id, id_fac, bl_factory, data_source, data_target, ...)
+          private$addSingleCatBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
+            data_source = data_source, data_target = data_target, grid_mat = NULL, ...)
         }	else {
-          private$addSingleNumericBl(data_columns, feature, id, id_fac, bl_factory, data_source, data_target, ...)
+          private$addSingleNumericBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
+            data_source = data_source, data_target = data_target, grid_mat = NULL, ...)
         }
       } else {
         # FDA case - kronecker each learn with grid baselearner
+        
+        if(bl_factory == BaselearnerPSpline){
+          stop("PSplines are currently not supported as covriates.")
+        }
+
         data_columns = self$data[, feature, drop = FALSE]
         id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
         
         if (ncol(data_columns) == 1 && !is.numeric(data_columns[, 1])) {
-          private$addSingleCatBl(data_columns, feature, id, id_fac, bl_factory, data_source, data_target, ...)
+          private$addSingleCatBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
+            data_source = data_source, data_target = data_target, grid_mat = self$grid_mat, ...)
         }	else {
-          private$addSingleNumericBl(data_columns, feature, id, id_fac, bl_factory, data_source, data_target, ...)
+          private$addSingleNumericBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
+            data_source = data_source, data_target = data_target, grid_mat = self$grid_mat, ...)
         }
         
       }
@@ -472,11 +471,8 @@ Compboost = R6::R6Class("Compboost",
       if(!is.logical(keep)){
         stop("keep must be logical.")
       }
-      if(class(private$bl_list[[bl1]]$factory) != class(private$bl_list[[bl2]]$factory)){
-        stop("Baselearners must be of the same kind to be combined.")
-      }
       
-      browser()
+      # browser()
       # Get Design Matrices from both learners
       bl1_design_mat = private$bl_list[[bl1]]$factory$getData()
       bl2_design_mat = private$bl_list[[bl2]]$factory$getData()
@@ -485,32 +481,18 @@ Compboost = R6::R6Class("Compboost",
       bln_design_mat = as.matrix(rowwiseTensor(bl1_design_mat, bl2_design_mat))
       
       data_source = InMemoryData$new(bln_design_mat, "")
-      data_target = InMemoryData$new()
+      data_target = InMemoryData$new(bln_design_mat, "")
       
-      instantiateDataFun = function (X) {
-        return(X)
-      }
-      # Ordinary least squares estimator:
-      trainFun = function (y, X) {
-        return(solve(t(X) %*% X) %*% t(X) %*% y)
-      }
-      predictFun = function (model, newdata) {
-        return(as.matrix(newdata %*% model))
-      }
-      extractParameter = function (model) {
-        return(as.matrix(model))
-      }
-      
-      id_fac = ""
+      id_fac = bln
 
       private$bl_list[[bln]] = list()
-      private$bl_list[[bln]]$source = data_source$new(bln_design_mat, "")
+      private$bl_list[[bln]]$source = data_source
       private$bl_list[[bln]]$feature = bln
-      private$bl_list[[bln]]$target = data_target$new()
-      private$bl_list[[bln]]$factory = BaselearnerCustom$new(data_source, data_target,
-                                                             list(instantiate_fun = instantiateDataFun, train_fun = trainFun,
-                                                                  predict_fun = predictFun, param_fun = extractParameter))
-
+      private$bl_list[[bln]]$target = data_target
+      private$bl_list[[bln]]$factory = BaselearnerTargetOnly$new(data_source, data_target,id_fac,
+                                                                 list(degree = 1, intercept = TRUE))
+      self$bl_factory_list$registerFactoryShort(private$bl_list[[bln]]$factory)
+      
       if(!keep){
         private$bl_list[[bl1]] = NULL
         private$bl_list[[bl2]] = NULL
@@ -774,15 +756,21 @@ Compboost = R6::R6Class("Compboost",
           oob.response = self$response_oob)
       }
     },
-    addSingleNumericBl = function(data_columns, feature, id_fac, id, bl_factory, data_source, data_target, ...) {
+    addSingleNumericBl = function(data_columns, feature, id_fac, id, bl_factory, data_source, data_target, grid_mat = NULL, ...) {
 
-      
       private$bl_list[[id]] = list()
       private$bl_list[[id]]$source = data_source$new(as.matrix(data_columns), paste(feature, collapse = "_"))
       private$bl_list[[id]]$feature = feature
       private$bl_list[[id]]$target = data_target$new()
-      private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target, id_fac, list(...))
-
+      
+      
+      if(class(self$response)[1] == "Rcpp_ResponseFDA"){
+        # Call Constructer with grid_mat in FDA case
+        private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target, 
+          InMemoryData$new(self$grid_mat), list(...))
+      } else{
+        private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target, id_fac, list(...))
+      }
       self$bl_factory_list$registerFactory(private$bl_list[[id]]$factory)
       private$bl_list[[id]]$source = NULL
 

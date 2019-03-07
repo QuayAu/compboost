@@ -28,11 +28,11 @@ arma::mat rowWiseKronecker (const arma::mat& A, const arma::mat& B)
 {
   // Variables
   arma::mat out;
-  arma::rowvec vecA = arma::rowvec(A.n_rows, arma::fill::ones);
-  arma::rowvec vecB = arma::rowvec(B.n_rows, arma::fill::ones);
+  arma::rowvec vecA = arma::rowvec(A.n_cols, arma::fill::ones);
+  arma::rowvec vecB = arma::rowvec(B.n_cols, arma::fill::ones);
 
   // Multiply both kronecker products element-wise
-  out = arma::kron(A,vecA) % arma::kron(vecB, B);
+  out = arma::kron(A,vecB) % arma::kron(vecA, B);
 
   return out;
 }

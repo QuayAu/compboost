@@ -303,6 +303,21 @@ public:
     sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPolynomialFactory>(blearner_type_temp, data_source.getDataObj(),
       data_target.getDataObj(), internal_arg_list["degree"], internal_arg_list["intercept"]);
   }
+  
+  BaselearnerPolynomialFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target,
+                                       DataWrapper& grid_mat, Rcpp::List arg_list)
+  {
+    // Match defaults with custom arguments:
+    internal_arg_list = helper::argHandler(internal_arg_list, arg_list, TRUE);
+    
+    // We need to converse the SEXP from the element to an integer:
+    int degree = internal_arg_list["degree"];
+    
+    std::string blearner_type_temp = "polynomial_degree_" + std::to_string(degree);
+    
+    sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPolynomialFactory>(blearner_type_temp, data_source.getDataObj(),
+      data_target.getDataObj(), grid_mat.getDataObj(), internal_arg_list["degree"], internal_arg_list["intercept"]);
+  }
 
   BaselearnerPolynomialFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target,
     const std::string& blearner_type, Rcpp::List arg_list)
@@ -556,7 +571,7 @@ class BaselearnerTargetOnlyFactoryWrapper : public BaselearnerFactoryWrapper
 private:
   Rcpp::List internal_arg_list = Rcpp::List::create(
     Rcpp::Named("degree") = 1,
-    Rcpp::Named("intercept") = true
+    Rcpp::Named("intercept") = false
   );
   
 public:
@@ -587,21 +602,6 @@ public:
   
   void summarizeFactory ()
   {
-    // We need to converse the SEXP from the element to an integer:
-    int degree = internal_arg_list["degree"];
-    
-    if (degree == 1) {
-      Rcpp::Rcout << "Linear base-learner factory:" << std::endl;
-    }
-    if (degree == 2) {
-      Rcpp::Rcout << "Quadratic base-learner factory:" << std::endl;
-    }
-    if (degree == 3) {
-      Rcpp::Rcout << "Cubic base-learner factory:" << std::endl;
-    }
-    if (degree > 3) {
-      Rcpp::Rcout << "TargetOnly base-learner of degree " << degree << " factory:" << std::endl;
-    }
     Rcpp::Rcout << "\t- Name of the used data: " << sh_ptr_blearner_factory->getDataIdentifier() << std::endl;
     Rcpp::Rcout << "\t- Factory creates the following base-learner: " << sh_ptr_blearner_factory->getBaselearnerType() << std::endl;
   }
@@ -906,6 +906,7 @@ RCPP_MODULE (baselearner_factory_module)
   class_<BaselearnerPolynomialFactoryWrapper> ("BaselearnerPolynomial")
     .derives<BaselearnerFactoryWrapper> ("Baselearner")
     .constructor<DataWrapper&, DataWrapper&, Rcpp::List> ()
+    .constructor<DataWrapper&, DataWrapper&, DataWrapper&, Rcpp::List> ()
     .constructor<DataWrapper&, DataWrapper&, std::string, Rcpp::List> ()
 
     .method("summarizeFactory", &BaselearnerPolynomialFactoryWrapper::summarizeFactory, "Summarize Factory")
@@ -1034,6 +1035,12 @@ public:
     std::string factory_id = my_factory_to_register.getFactory()->getDataIdentifier() + "_" + my_factory_to_register.getFactory()->getBaselearnerType();
     obj.registerBaselearnerFactory(factory_id, my_factory_to_register.getFactory());
   }
+  
+  void registerFactoryShort (BaselearnerFactoryWrapper& my_factory_to_register)
+  {
+    std::string factory_id = my_factory_to_register.getFactory()->getBaselearnerType();
+    obj.registerBaselearnerFactory(factory_id, my_factory_to_register.getFactory());
+  }
 
   void printRegisteredFactories ()
   {
@@ -1083,6 +1090,7 @@ RCPP_MODULE (baselearner_list_module)
   class_<BlearnerFactoryListWrapper> ("BlearnerFactoryList")
     .constructor ()
     .method("registerFactory", &BlearnerFactoryListWrapper::registerFactory, "Register new factory")
+    .method("registerFactoryShort", &BlearnerFactoryListWrapper::registerFactoryShort, "Register new factory without addding _")
     .method("printRegisteredFactories", &BlearnerFactoryListWrapper::printRegisteredFactories, "Print all registered factories")
     .method("clearRegisteredFactories", &BlearnerFactoryListWrapper::clearRegisteredFactories, "Clear factory map")
     .method("getModelFrame", &BlearnerFactoryListWrapper::getModelFrame, "Get the data used for modeling")

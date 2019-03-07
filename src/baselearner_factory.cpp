@@ -19,6 +19,7 @@
 // =========================================================================== #
 
 #include "baselearner_factory.h"
+#include "tensors.h"
 
 namespace blearnerfactory {
 
@@ -100,6 +101,33 @@ BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string& b
   // blearner_type = blearner_type + " with degree " + std::to_string(degree);
 }
 
+BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string& blearner_type0,
+  std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0, 
+  std::shared_ptr<data::Data> grid_mat0, const unsigned int& degree, const bool& intercept)
+  : degree ( degree ),
+    intercept ( intercept )
+{
+  blearner_type = blearner_type0;
+  
+  data_source = data_source0;
+  data_target = data_target0;
+  grid_mat = grid_mat0;
+  
+  // Make sure that the data identifier is setted correctly:
+  data_target->setDataIdentifier(data_source->getDataIdentifier());
+  
+
+  // Get the data of the source, transform it and write it into the target:
+  data_target->setData(instantiateData(data_source->getData()));
+  data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData());
+  
+  // blearner_type = blearner_type + " with degree " + std::to_string(degree);
+}
+
+
+
+
+
 std::shared_ptr<blearner::Baselearner> BaselearnerPolynomialFactory::createBaselearner (const std::string& identifier)
 {
   std::shared_ptr<blearner::Baselearner>  sh_ptr_blearner = std::make_shared<blearner::BaselearnerPolynomial>(data_target, identifier, degree, intercept);
@@ -155,6 +183,16 @@ arma::mat BaselearnerPolynomialFactory::instantiateData (const arma::mat& newdat
   if (intercept) {
     arma::mat temp_intercept(temp.n_rows, 1, arma::fill::ones);
     temp = join_rows(temp_intercept, temp);
+  }
+  if(grid_mat) {
+    arma::mat data_kroned = arma::zeros(temp.n_rows,temp.n_cols*grid_mat->getData().n_cols);
+    
+    int grid_n = grid_mat->getData().n_rows;
+    
+    for(int i = 0; i < temp.n_rows - 1; i = i-1 + grid_n) {
+      data_kroned.rows(i,(i-1 + grid_n)) = tensors::rowWiseKronecker(grid_mat->getData(),temp.rows(i,(i-1 + grid_n)));
+    }
+    temp = data_kroned;
   }
   return temp;
 }
@@ -328,11 +366,6 @@ BaselearnerTargetOnlyFactory::BaselearnerTargetOnlyFactory (const std::string& b
   data_source = data_source0;
   data_target = data_target0;
   
-  // Make sure that the data identifier is setted correctly:
-  data_target->setDataIdentifier(data_source->getDataIdentifier());
-  
-  // Get the data of the source, transform it and write it into the target:
-  data_target->setData(instantiateData(data_source->getData()));
   data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData());
   
   // blearner_type = blearner_type + " with degree " + std::to_string(degree);

@@ -103,15 +103,19 @@ public:
 
   BaselearnerPolynomialFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>, const unsigned int&,
     const bool&);
+  
+  BaselearnerPolynomialFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>, 
+    std::shared_ptr<data::Data>, const unsigned int&, const bool&);
 
   std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
+  
+  std::shared_ptr<data::Data> grid_mat;
 
   /// Get data used for modeling
   arma::mat getData() const;
 
   arma::mat instantiateData (const arma::mat&) const;
 };
-
 
 
 // BaselearnerPSplineFactory:
