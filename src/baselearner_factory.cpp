@@ -184,15 +184,17 @@ arma::mat BaselearnerPolynomialFactory::instantiateData (const arma::mat& newdat
     arma::mat temp_intercept(temp.n_rows, 1, arma::fill::ones);
     temp = join_rows(temp_intercept, temp);
   }
+
   if(grid_mat) {
     arma::mat data_kroned = arma::zeros(temp.n_rows,temp.n_cols*grid_mat->getData().n_cols);
     
     int grid_n = grid_mat->getData().n_rows;
     
-    for(int i = 0; i < temp.n_rows - 1; i = i-1 + grid_n) {
+    for(int i = 0; i <= temp.n_rows - grid_n; i = i + grid_n) {
       data_kroned.rows(i,(i-1 + grid_n)) = tensors::rowWiseKronecker(grid_mat->getData(),temp.rows(i,(i-1 + grid_n)));
     }
     temp = data_kroned;
+
   }
   return temp;
 }

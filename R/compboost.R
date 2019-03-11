@@ -399,9 +399,9 @@ Compboost = R6::R6Class("Compboost",
         blt_source = InMemoryData$new(as.matrix(self$response$getGrid()[1,]), "")
         blt_target = InMemoryData$new()
         
-        spline_fact = BaselearnerPSpline$new(blt_source, blt_target, list(degree = 3, n_knots = 25, differences = 2))
+        time_spline = BaselearnerPSpline$new(blt_source, blt_target, list(degree = 3, n_knots = 25, differences = 2))
         
-        self$grid_mat = spline_fact$getData()
+        self$grid_mat = time_spline$getData()
       }
 
     },
@@ -767,7 +767,7 @@ Compboost = R6::R6Class("Compboost",
       if(class(self$response)[1] == "Rcpp_ResponseFDA"){
         # Call Constructer with grid_mat in FDA case
         private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target, 
-          InMemoryData$new(self$grid_mat), list(...))
+          InMemoryData$new(self$grid_mat, ""), list(...))
       } else{
         private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target, id_fac, list(...))
       }
