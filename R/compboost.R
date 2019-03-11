@@ -499,15 +499,15 @@ Compboost = R6::R6Class("Compboost",
       }
         
     },CenterBaselearner = function(bl_target, bl_center){
-      if(! bl_target %in% self$getBaselearnerNames()){
-        stop("bl_target is not a registered Baselearner.")
-      }
-      if(! bl_center %in% self$getBaselearnerNames()){
-        stop("bl_center is not a registered Baselearner.")
-      }
-      if(class(private$bl_list[[bl_target]]$factory) != class(private$bl_list[[bl_center]]$factory)){
-        stop("Baselearners must be of the same kind to be combined.")
-      }
+      # if(! bl_target %in% self$getBaselearnerNames()){
+      #   stop("bl_target is not a registered Baselearner.")
+      # }
+      # if(! bl_center %in% self$getBaselearnerNames()){
+      #   stop("bl_center is not a registered Baselearner.")
+      # }
+      # if(class(private$bl_list[[bl_target]]$factory) != class(private$bl_list[[bl_center]]$factory)){
+      #   stop("Baselearners must be of the same kind to be combined.")
+      # }
       
       # Get Design Matrices from both learners
       bl_target_design_mat = private$bl_list[[bl_target]]$factory$getData()
@@ -538,7 +538,45 @@ Compboost = R6::R6Class("Compboost",
       private$bl_list[[blc]] = private$bl_list[[bl_target]]
       private$bl_list[[bl_target]] = NULL
 
-    },
+    },addInterceptBaselearner = function(bl_factory, ...) {
+      if (!is.null(self$model)) {
+        stop("No base-learners can be added after training is started")
+      }
+
+      feature = "ONE"
+      id = "intercept"
+      data_source = InMemoryData
+      data_target = InMemoryData
+      
+      # Clear base-learners which are within the bl_list but not registered:
+      idx_remove = ! names(private$bl_list) %in% self$bl_factory_list$getRegisteredFactoryNames()
+      if (any(idx_remove)) {
+        for (i in which(idx_remove)) {
+          private$bl_list[[i]] = NULL
+        }
+      }
+      
+      # Check if the response functional data
+      if(class(self$response) != "Rcpp_ResponseFDA"){
+        data_columns = data.frame(ONE = matrix(1, nrow = nrow(self$data)))
+        id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
+        
+        private$addSingleNumericBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
+          data_source = data_source, data_target = data_target, grid_mat = NULL, ...)
+      } else {
+        # FDA case - kronecker each learn with grid baselearner
+        
+        if(bl_factory == BaselearnerPSpline){
+          stop("PSplines are currently not supported as covriates.")
+        }
+        
+        data_columns = data.frame(ONE = matrix(1, nrow = nrow(self$data)))
+        id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
+
+        private$addSingleNumericBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
+          data_source = data_source, data_target = data_target, grid_mat = self$grid_mat, ...)
+      }
+      }, 
     train = function(iteration = 100, trace = -1) {
 
       if (self$bl_factory_list$getNumberOfRegisteredFactories() == 0) {
