@@ -396,4 +396,142 @@ void ResponseFDA::filter (const arma::uvec& idx)
 arma::mat ResponseFDA::getGrid () const { return grid; }
 
 
+
+// ------------------------------------------------------------------------------------------------------------------------------- //
+
+
+// Functional Data Response
+
+ResponseFDALong::ResponseFDALong (std::vector<std::string>& target_name0, arma::field<arma::mat>& response0, arma::field<arma::mat>& grid0)
+{
+  target_name = target_name0;
+  
+  // All Data is provided within a list, because the grid sizes vary
+  // we will concatenat everything
+  response = arma::mat() ;
+  for(arma::uword i = 0; i < response0.n_elem; i++){
+    arma::mat temp = response0(i);
+    temp.reshape(temp.n_elem,1);
+    response = arma::join_cols(response, temp);
+  }
+  grid = arma::mat();
+  grid_field = grid0;
+  for(arma::uword i = 0; i < grid0.n_elem; i++){
+    arma::mat temp = grid0(i);
+    temp.reshape(temp.n_elem,1);
+    grid = arma::join_cols(grid, temp);
+  }
+  
+  task_id = "regression"; // set parent
+  arma::mat temp_mat(response.n_rows, response.n_cols, arma::fill::zeros);
+  prediction_scores = temp_mat; // set parent
+  pseudo_residuals = temp_mat;  // set parent
+  arma::mat temp_mat_1(response.n_rows, response.n_cols, arma::fill::ones);
+  weights = temp_mat_1; 
+  
+  // Trapez weights are calculated and concatenated
+  trapez_weights = arma::mat();
+  for(arma::uword i = 0; i < grid0.n_elem; i++){
+    arma::mat temp = tensors::trapezWeights(grid0(i));
+    temp.reshape(temp.n_elem,1);
+    trapez_weights = arma::join_cols(trapez_weights, temp);
+  }
+
+}
+
+ResponseFDALong::ResponseFDALong (std::vector<std::string>& target_name0, arma::field<arma::mat>& response0, arma::field<arma::mat>& weights0, 
+  arma::field<arma::mat>& grid0)
+{
+  target_name = target_name0;
+  // All Data is provided within a list, because the grid sizes vary
+  // we will concatenat everything
+  response = arma::mat() ;
+  for(arma::uword i = 0; i < response0.n_elem; i++){
+    arma::mat temp = response0(i);
+    temp.reshape(temp.n_elem,1);
+    response = arma::join_cols(response, temp);
+    Rcpp::Rcout << "Bing " << i << std::endl;
+  }
+  grid = arma::mat();
+  grid_field = grid0;
+  for(arma::uword i = 0; i < grid0.n_elem; i++){
+    arma::mat temp = grid0(i);
+    temp.reshape(temp.n_elem,1);
+    grid = arma::join_cols(grid, temp);
+  }
+  arma::mat weights;
+  for(arma::uword i = 0; i < weights0.n_elem; i++){
+    arma::mat temp = weights0(i);
+    temp.reshape(temp.n_elem,1);
+    weights = arma::join_cols(weights, temp);
+  }
+  
+  task_id = "regression"; // set parent
+  arma::mat temp_mat(response.n_rows, response.n_cols, arma::fill::zeros);
+  prediction_scores = temp_mat; // set parent
+  pseudo_residuals = temp_mat;  // set parent
+  // FDA specifics
+  // Trapez weights are calculated and concatenated
+  trapez_weights = arma::mat();
+  for(arma::uword i = 0; i < grid0.n_elem; i++){
+    arma::mat temp = tensors::trapezWeights(grid0(i));
+    temp.reshape(temp.n_elem,1);
+    trapez_weights = arma::join_cols(trapez_weights, temp);
+  }
+
+
+}
+
+arma::mat ResponseFDALong::calculateInitialPrediction (const arma::mat& response) const
+{
+  arma::mat init(response.n_rows, response.n_cols, arma::fill::zeros);
+  
+  if (! is_initialization_initialized) {
+    Rcpp::stop("Response is not initialized, call 'constantInitialization()' first.");
+  }
+  // Use just first element to correctly use .fill:
+  init.fill(initialization[0]);
+  return init;
+}
+
+void ResponseFDALong::initializePrediction ()
+{
+  if (is_initialization_initialized) {
+    if (! is_model_initialized) {
+      prediction_scores = calculateInitialPrediction(response);
+      is_model_initialized = true;
+    } else {
+      Rcpp::stop("Prediction is already initialized.");
+    }
+  } else {
+    Rcpp::stop("Initialize constant initialization first by calling 'constantInitialization()'.");
+  }
+}
+
+arma::mat ResponseFDALong::getPredictionTransform (const arma::mat& pred_scores) const
+{
+  // No transformation is done in regression
+  return pred_scores;
+}
+
+arma::mat ResponseFDALong::getPredictionResponse (const arma::mat& pred_scores) const
+{
+  return pred_scores;
+}
+
+
+void ResponseFDALong::filter (const arma::uvec& idx)
+{
+  response = response.elem(idx);
+  if (use_weights) {
+    weights = weights.elem(idx);
+  }
+  pseudo_residuals = pseudo_residuals.elem(idx);
+  prediction_scores = prediction_scores.elem(idx);
+}
+
+arma::field<arma::mat> ResponseFDALong::getGrid_field () const { return grid_field; }
+
 } // namespace response
+
+

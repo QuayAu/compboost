@@ -124,7 +124,28 @@ BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string& b
   // blearner_type = blearner_type + " with degree " + std::to_string(degree);
 }
 
+BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string& blearner_type0,
+  std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0, 
+  std::shared_ptr<arma::field<arma::mat> > grid_mat0, const unsigned int& degree, const bool& intercept)
+  : degree ( degree ),
+    intercept ( intercept )
+{
+  blearner_type = blearner_type0;
+  
+  data_source = data_source0;
+  data_target = data_target0;
+  grid_mat = grid_mat0;
+  
+  // Make sure that the data identifier is setted correctly:
+  data_target->setDataIdentifier(data_source->getDataIdentifier());
+  
 
+  // Get the data of the source, transform it and write it into the target:
+  data_target->setData(instantiateData(data_source->getData()));
+  data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData());
+  
+  // blearner_type = blearner_type + " with degree " + std::to_string(degree);
+}
 
 
 

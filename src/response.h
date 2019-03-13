@@ -145,6 +145,28 @@ public:
   arma::mat getGrid () const;
 };
 
+// -----------------------------------------------------------------------------------------------------------------
+class ResponseFDALong : public Response
+{
+  
+public:
+  arma::mat grid;
+  arma::field<arma::mat> grid_field;
+  arma::mat trapez_weights;
+  
+  ResponseFDALong (std::vector<std::string>&, arma::field<arma::mat>&, arma::field<arma::mat>&);
+  ResponseFDALong (std::vector<std::string>&, arma::field<arma::mat>&, arma::field<arma::mat>&, arma::field<arma::mat>&);
+  
+  arma::mat calculateInitialPrediction (const arma::mat&) const;
+  void initializePrediction ();
+  void updatePseudoResiduals (std::shared_ptr<loss::Loss>);
+  arma::mat getPredictionTransform (const arma::mat&) const;
+  arma::mat getPredictionResponse (const arma::mat&) const;
+  
+  void filter (const arma::uvec&);
+  arma::field<arma::mat> getGrid_field () const;
+};
+
 
 } // namespace response
 

@@ -106,6 +106,9 @@ public:
   
   BaselearnerPolynomialFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>, 
     std::shared_ptr<data::Data>, const unsigned int&, const bool&);
+  
+  BaselearnerPolynomialFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>, 
+    std::shared_ptr<arma::field<arma::mat> >, const unsigned int&, const bool&);
 
   std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
   

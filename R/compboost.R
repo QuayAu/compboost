@@ -363,7 +363,13 @@ Compboost = R6::R6Class("Compboost",
         
         if(class(target)[1] == "Rcpp_ResponseFDA"){
           # clone data FIXME find better implementation through pointers
+          # FIXME implement FLAM
           data = data[rep(seq_len(nrow(data)), each = ncol(target$getGrid())),]
+        }
+        if(class(target)[1] == "Rcpp_ResponseFDALong"){
+          # clone data FIXME find better implementation through pointers
+          grid_lengths = unlist(lapply(target$getGrid_field(),length))
+          data = data[rep(1:nrow(data), grid_lengths),]
         }
         if (nrow(target$getResponse()) != nrow(data))
           stop("Response must have same number of observations as the given dataset")
@@ -402,6 +408,20 @@ Compboost = R6::R6Class("Compboost",
         time_spline = BaselearnerPSpline$new(blt_source, blt_target, list(degree = 3, n_knots = 25, differences = 2))
         
         self$grid_mat = time_spline$getData()
+      }
+      
+      if(class(self$response)[1] == "Rcpp_ResponseFDALong"){
+        
+        grids = self$response$getGrid_field()
+        grid_mats = list()
+        
+        for(g in 1:length(grids)){
+          g_source = InMemoryData$new(matrix(grids[[g]], ncol = 1), "")
+          g_target = InMemoryData$new()
+          g_spline = BaselearnerPSpline$new(g_source, g_target, list(degree = 3, n_knots = 25, differences = 2))
+          grid_mats[[g]] = g_spline$getData()
+        }
+        self$grid_mat = grid_mats
       }
 
     },

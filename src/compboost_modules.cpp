@@ -1587,6 +1587,44 @@ public:
   
 };
 
+//' Create response object for functional response data.
+//'
+//' \code{ResponseFDALong} creates a response object that are used as target during the
+//' fitting process.
+//'
+//' @format \code{\link{S4}} object.
+//' @name ResponseFDALong
+//'
+//' @section Usage:
+//' \preformatted{
+
+//' ResponseFDALong$new(target_name, response)
+//' ResponseFDALong$new(target_name, response, weights)
+//' }
+//'
+//' @export ResponseFDALong
+class ResponseFDALongWrapper : public ResponseWrapper
+{
+public:
+  
+  ResponseFDALongWrapper (std::vector<std::string> target_name, arma::field<arma::mat> response, arma::field<arma::mat> grid)
+  {
+    sh_ptr_response = std::make_shared<response::ResponseFDALong>(target_name, response, grid);
+  }
+  ResponseFDALongWrapper (std::vector<std::string> target_name, arma::field<arma::mat> response, 
+    arma::field<arma::mat> weights, arma::field<arma::mat> grid)
+  {
+    sh_ptr_response = std::make_shared<response::ResponseFDALong>(target_name, response, weights, grid);
+  }
+
+  arma::field<arma::mat> getGrid_field () const
+  {
+    return std::static_pointer_cast<response::ResponseFDALong>(sh_ptr_response)->grid_field;
+  }
+  
+};
+
+
 RCPP_EXPOSED_CLASS(ResponseWrapper)
 RCPP_MODULE (response_module)
 {
@@ -1630,6 +1668,14 @@ RCPP_MODULE (response_module)
      .constructor<std::vector<std::string>, arma::mat, arma::mat, arma::mat> ()
   
       .method("getGrid",           &ResponseFDAWrapper::getGrid, "Get the functional grid.")
+ ;
+ class_<ResponseFDALongWrapper> ("ResponseFDALong")
+    .derives<ResponseWrapper> ("Response")
+  
+     .constructor<std::vector<std::string>, arma::field<arma::mat>, arma::field<arma::mat> > ()
+     .constructor<std::vector<std::string>, arma::field<arma::mat>, arma::field<arma::mat>, arma::field<arma::mat> > ()
+  
+      .method("getGrid_field",           &ResponseFDALongWrapper::getGrid_field, "Get the functional grid.")
  ;
 }
 

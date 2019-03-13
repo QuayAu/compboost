@@ -924,6 +924,25 @@ NULL
 #' @export ResponseFDA
 NULL
 
+#' Create response object for functional response data.
+#'
+#' \code{ResponseFDALong} creates a response object that are used as target during the
+#' fitting process.
+#'
+#' @format \code{\link{S4}} object.
+#' @name ResponseFDALong
+#'
+#' @section Usage:
+#' \preformatted{
+NULL
+
+#' ResponseFDALong$new(target_name, response)
+#' ResponseFDALong$new(target_name, response, weights)
+#' }
+#'
+#' @export ResponseFDALong
+NULL
+
 #' Logger class to log the current iteration
 #'
 #' @format \code{\link{S4}} object.
