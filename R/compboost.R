@@ -407,7 +407,7 @@ Compboost = R6::R6Class("Compboost",
         
         time_spline = BaselearnerPSpline$new(blt_source, blt_target, list(degree = 3, n_knots = 25, differences = 2))
         
-        self$grid_mat = time_spline$getData()
+        self$grid_mat = list(time_spline$getData())
       }
       
       if(class(self$response)[1] == "Rcpp_ResponseFDALong"){
@@ -450,7 +450,24 @@ Compboost = R6::R6Class("Compboost",
       }
       
       # Check if the response functional data
-      if(class(self$response) != "Rcpp_ResponseFDA"){
+      if(class(self$response) %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
+        data_columns = self$data[, feature, drop = FALSE]
+        id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
+        
+        if (ncol(data_columns) == 1 && !is.numeric(data_columns[, 1])) {
+          private$addSingleCatBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
+            data_source = data_source, data_target = data_target, grid_mat = self$grid_mat, ...)
+        }	else {
+          private$addSingleNumericBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
+            data_source = data_source, data_target = data_target, grid_mat = self$grid_mat, ...)
+        }
+       
+      } else {
+        # FDA case - kronecker each learn with grid baselearner
+        if(bl_factory == BaselearnerPSpline){
+          stop("PSplines are currently not supported as covriates.")
+        }
+
         data_columns = self$data[, feature, drop = FALSE]
         id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
   
@@ -460,25 +477,7 @@ Compboost = R6::R6Class("Compboost",
         }	else {
           private$addSingleNumericBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
             data_source = data_source, data_target = data_target, grid_mat = NULL, ...)
-        }
-      } else {
-        # FDA case - kronecker each learn with grid baselearner
-        
-        if(bl_factory == BaselearnerPSpline){
-          stop("PSplines are currently not supported as covriates.")
-        }
-
-        data_columns = self$data[, feature, drop = FALSE]
-        id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
-        
-        if (ncol(data_columns) == 1 && !is.numeric(data_columns[, 1])) {
-          private$addSingleCatBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
-            data_source = data_source, data_target = data_target, grid_mat = self$grid_mat, ...)
-        }	else {
-          private$addSingleNumericBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
-            data_source = data_source, data_target = data_target, grid_mat = self$grid_mat, ...)
-        }
-        
+        } 
       }
     },
     CombineBaselearners = function(bl1, bl2, bl_factory, keep = FALSE, ...){
@@ -799,10 +798,9 @@ Compboost = R6::R6Class("Compboost",
     oob_idx = NULL,
     train_idx = NULL,
     initializeModel = function() {
-
+      browser()
       private$logger_list = LoggerList$new()
       lapply(private$l_list, function (logger) { private$logger_list$registerLogger(logger) })
-
       self$model = Compboost_internal$new(self$response, self$learning_rate,
         self$stop_if_all_stoppers_fulfilled, self$bl_factory_list, self$loss, private$logger_list, self$optimizer)
     },
@@ -822,10 +820,10 @@ Compboost = R6::R6Class("Compboost",
       private$bl_list[[id]]$target = data_target$new()
       
       
-      if(class(self$response)[1] == "Rcpp_ResponseFDA"){
+      if(class(self$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
         # Call Constructer with grid_mat in FDA case
         private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target, 
-          InMemoryData$new(self$grid_mat, ""), list(...))
+          self$grid_mat, list(...))
       } else{
         private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target, id_fac, list(...))
       }

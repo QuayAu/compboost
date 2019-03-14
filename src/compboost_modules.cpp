@@ -305,7 +305,7 @@ public:
   }
   
   BaselearnerPolynomialFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target,
-                                       DataWrapper& grid_mat, Rcpp::List arg_list)
+    arma::field<arma::mat> grid_mat, Rcpp::List arg_list)
   {
     // Match defaults with custom arguments:
     internal_arg_list = helper::argHandler(internal_arg_list, arg_list, TRUE);
@@ -316,7 +316,7 @@ public:
     std::string blearner_type_temp = "polynomial_degree_" + std::to_string(degree);
     
     sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPolynomialFactory>(blearner_type_temp, data_source.getDataObj(),
-      data_target.getDataObj(), grid_mat.getDataObj(), internal_arg_list["degree"], internal_arg_list["intercept"]);
+      data_target.getDataObj(), grid_mat, internal_arg_list["degree"], internal_arg_list["intercept"]);
   }
 
   BaselearnerPolynomialFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target,
@@ -906,7 +906,7 @@ RCPP_MODULE (baselearner_factory_module)
   class_<BaselearnerPolynomialFactoryWrapper> ("BaselearnerPolynomial")
     .derives<BaselearnerFactoryWrapper> ("Baselearner")
     .constructor<DataWrapper&, DataWrapper&, Rcpp::List> ()
-    .constructor<DataWrapper&, DataWrapper&, DataWrapper&, Rcpp::List> ()
+    .constructor<DataWrapper&, DataWrapper&, arma::field<arma::mat>, Rcpp::List> ()
     .constructor<DataWrapper&, DataWrapper&, std::string, Rcpp::List> ()
 
     .method("summarizeFactory", &BaselearnerPolynomialFactoryWrapper::summarizeFactory, "Summarize Factory")
@@ -2611,12 +2611,11 @@ public:
     bool stop_if_all_stopper_fulfilled, BlearnerFactoryListWrapper& factory_list,
     LossWrapper& loss, LoggerListWrapper& logger_list, OptimizerWrapper& optimizer)
   {
-
     learning_rate0     =  learning_rate;
     sh_ptr_loggerlist  =  logger_list.getLoggerList();
     sh_ptr_optimizer   =  optimizer.getOptimizer();
     blearner_list_ptr  =  factory_list.getFactoryList();
-
+    
     std::unique_ptr<cboost::Compboost> unique_ptr_cboost_temp(new cboost::Compboost(response.getResponseObj(), learning_rate0,
       stop_if_all_stopper_fulfilled, sh_ptr_optimizer, loss.getLoss(), sh_ptr_loggerlist, *blearner_list_ptr));
     unique_ptr_cboost = std::move(unique_ptr_cboost_temp);
@@ -2635,7 +2634,7 @@ public:
 
   Rcpp::List getLoggerData ()
   {
-    Rcpp::List out_list;
+    Rcpp::List out_list; 
 
     out_list["logger_data"] = Rcpp::List::create(
       Rcpp::Named("logger_names") = unique_ptr_cboost->getLoggerList()->getLoggerData().first,
@@ -2647,7 +2646,7 @@ public:
   Rcpp::List getEstimatedParameter ()
   {
     std::map<std::string, arma::mat> parameter = unique_ptr_cboost->getParameter();
-
+    Rcpp::Rcout << "Bing 1231";
     Rcpp::List out;
 
     for (auto &it : parameter) {
@@ -2671,7 +2670,7 @@ public:
   Rcpp::List getParameterMatrix ()
   {
     std::pair<std::vector<std::string>, arma::mat> out_pair = unique_ptr_cboost->getParameterMatrix();
-
+    Rcpp::Rcout << "Bing 12763";
     return Rcpp::List::create(
       Rcpp::Named("parameter_names")   = out_pair.first,
       Rcpp::Named("parameter_matrix")  = out_pair.second
@@ -2681,7 +2680,7 @@ public:
   arma::vec predict (Rcpp::List& newdata, bool as_response)
   {
     std::map<std::string, std::shared_ptr<data::Data>> data_map;
-
+    Rcpp::Rcout << "Bing 12543";
     for (unsigned int i = 0; i < newdata.size(); i++) {
       DataWrapper* temp = newdata[i];
       data_map[ temp->getDataObj()->getDataIdentifier() ] = temp->getDataObj();

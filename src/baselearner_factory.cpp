@@ -101,32 +101,10 @@ BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string& b
   // blearner_type = blearner_type + " with degree " + std::to_string(degree);
 }
 
-BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string& blearner_type0,
-  std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0, 
-  std::shared_ptr<data::Data> grid_mat0, const unsigned int& degree, const bool& intercept)
-  : degree ( degree ),
-    intercept ( intercept )
-{
-  blearner_type = blearner_type0;
-  
-  data_source = data_source0;
-  data_target = data_target0;
-  grid_mat = grid_mat0;
-  
-  // Make sure that the data identifier is setted correctly:
-  data_target->setDataIdentifier(data_source->getDataIdentifier());
-  
-
-  // Get the data of the source, transform it and write it into the target:
-  data_target->setData(instantiateData(data_source->getData()));
-  data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData());
-  
-  // blearner_type = blearner_type + " with degree " + std::to_string(degree);
-}
 
 BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string& blearner_type0,
   std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0, 
-  std::shared_ptr<arma::field<arma::mat> > grid_mat0, const unsigned int& degree, const bool& intercept)
+  arma::field<arma::mat> grid_mat0, const unsigned int& degree, const bool& intercept)
   : degree ( degree ),
     intercept ( intercept )
 {
@@ -206,17 +184,38 @@ arma::mat BaselearnerPolynomialFactory::instantiateData (const arma::mat& newdat
     temp = join_rows(temp_intercept, temp);
   }
 
-  if(grid_mat) {
-    arma::mat data_kroned = arma::zeros(temp.n_rows,temp.n_cols*grid_mat->getData().n_cols);
+  // grid_mat is a field of pointers to inMemoryData matrices
+  // grid_mat(0)->getData().n_cols 
+  // take first element of field (a pointer)
+  // dereference pointer, get an inMemoryData obj
+  // getData(), receive a matrix
+  // Case one: same grid, all on the same t-spline
+  if(grid_mat.n_elem == 1) {
+    arma::mat data_kroned = arma::zeros(temp.n_rows,temp.n_cols*grid_mat(0).n_cols);
     
-    int grid_n = grid_mat->getData().n_rows;
+    int grid_n = grid_mat(0).n_rows;
     
     for(int i = 0; i <= temp.n_rows - grid_n; i = i + grid_n) {
-      data_kroned.rows(i,(i-1 + grid_n)) = tensors::rowWiseKronecker(grid_mat->getData(),temp.rows(i,(i-1 + grid_n)));
+      data_kroned.rows(i,(i-1 + grid_n)) = tensors::rowWiseKronecker(grid_mat(0),temp.rows(i,(i-1 + grid_n)));
     }
     temp = data_kroned;
 
   }
+
+  // Case two: different grids, sepearte t-splines
+  if(grid_mat.n_elem > 1) {
+    arma::mat data_kroned = arma::mat();
+    
+    int row_tracker = 0;
+    for(int g; g < grid_mat.n_elem; g++){
+        int grid_n = grid_mat(g).n_rows;
+        arma::mat g_kroned = tensors::rowWiseKronecker(grid_mat(g), temp.rows(row_tracker,(row_tracker-1 + grid_n)));
+        data_kroned = arma::join_cols(data_kroned, g_kroned);
+        row_tracker = row_tracker + grid_n;
+    }
+    temp = data_kroned;
+  }
+  
   return temp;
 }
 

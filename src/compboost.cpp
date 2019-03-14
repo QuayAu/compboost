@@ -76,6 +76,7 @@ void Compboost::train (const unsigned int& trace, std::shared_ptr<loggerlist::Lo
     std::shared_ptr<blearner::Baselearner> sh_ptr_blearner_selected = sh_ptr_optimizer->findBestBaselearner(temp_string, 
       sh_ptr_response, used_baselearner_list.getMap());
 
+    
     // Prediction is needed more often, use a temp vector to avoid multiple computations:
     blearner_pred_temp = sh_ptr_blearner_selected->predict();
 

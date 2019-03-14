@@ -508,6 +508,14 @@ void ResponseFDALong::initializePrediction ()
   }
 }
 
+void ResponseFDALong::updatePseudoResiduals (std::shared_ptr<loss::Loss> sh_ptr_loss)
+{
+  checkLossCompatibility(sh_ptr_loss);
+  weights = weights.each_row() % trapez_weights.t();
+  pseudo_residuals = sh_ptr_loss->calculateWeightedPseudoResiduals(response, prediction_scores, weights);
+}
+
+
 arma::mat ResponseFDALong::getPredictionTransform (const arma::mat& pred_scores) const
 {
   // No transformation is done in regression
