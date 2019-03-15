@@ -110,7 +110,7 @@ BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string& b
     intercept ( intercept )
 {
   blearner_type = blearner_type0;
-  
+
   data_source = data_source0;
   data_target = data_target0;
   grid_mat = grid_mat0;
@@ -197,7 +197,7 @@ arma::mat BaselearnerPolynomialFactory::instantiateData (const arma::mat& newdat
     int grid_n = grid_mat(0).n_rows;
     
     for(int i = 0; i <= temp.n_rows - grid_n; i = i + grid_n) {
-      data_kroned.rows(i,(i-1 + grid_n)) = tensors::rowWiseKronecker(grid_mat(0),temp.rows(i,(i-1 + grid_n)));
+      data_kroned.rows(i,(i-1 + grid_n)) = tensors::rowWiseKronecker(grid_mat0(live),temp.rows(i,(i-1 + grid_n)));
     }
     temp = data_kroned;
 
@@ -378,8 +378,8 @@ arma::mat BaselearnerPSplineFactory::instantiateData (const arma::mat& newdata) 
 
 /// ---------------------------------------------------------------------------------------------- ///
 
-BaselearnerCombinedFactory::BaselearnerCombinedFactory (const std::string& blearner_type0, 
-  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_1, std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_2)
+BaselearnerCombinedFactory::BaselearnerCombinedFactory (const std::string& blearner_type0, std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_1, 
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_2)
 {
   blearner_type = blearner_type0;
   
@@ -390,7 +390,7 @@ BaselearnerCombinedFactory::BaselearnerCombinedFactory (const std::string& blear
   // calculate new design matrix
   arma::mat blc_mat = tensors::rowWiseKronecker(bl1_mat,bl2_mat);
   
-  data::InMemoryData blc_mat_inmem = data::InMemoryData(blc_mat, "bl1");
+  data::InMemoryData blc_mat_inmem = data::InMemoryData(blc_mat, "blearner_type");
   data_target = std::make_shared<data::InMemoryData>(blc_mat_inmem) ;
   
   data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData());

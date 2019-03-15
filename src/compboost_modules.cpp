@@ -300,6 +300,7 @@ public:
 
     std::string blearner_type_temp = "polynomial_degree_" + std::to_string(degree);
 
+    Rcpp::Rcout << "Wrapper 1";
     sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPolynomialFactory>(blearner_type_temp, data_source.getDataObj(),
       data_target.getDataObj(), internal_arg_list["degree"], internal_arg_list["intercept"]);
   }
@@ -313,6 +314,8 @@ public:
     // We need to converse the SEXP from the element to an integer:
     int degree = internal_arg_list["degree"];
     
+    Rcpp::Rcout << "Wrapper 2";
+    
     std::string blearner_type_temp = "polynomial_degree_" + std::to_string(degree);
     
     sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPolynomialFactory>(blearner_type_temp, data_source.getDataObj(),
@@ -320,12 +323,15 @@ public:
   }
 
   BaselearnerPolynomialFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target,
-    const std::string& blearner_type, Rcpp::List arg_list)
+    const std::string blearner_type, Rcpp::List arg_list)
   {
     internal_arg_list = helper::argHandler(internal_arg_list, arg_list, TRUE);
 
     // We need to converse the SEXP from the element to an integer:
     int degree = internal_arg_list["degree"];
+    
+    
+        Rcpp::Rcout << "Wrapper 3";
     
     std::string blearner_type_temp = "polynomial_degree_" + std::to_string(degree);
     
@@ -688,16 +694,14 @@ public:
 class BaselearnerCombinedFactoryWrapper : public BaselearnerFactoryWrapper
 {
 private:
-    Rcpp::List internal_arg_list = Rcpp::List::create();
+  
 public:
   
-  BaselearnerCombinedFactoryWrapper (BaselearnerFactoryWrapper& blearner_1, BaselearnerFactoryWrapper& blearner_2,
-                                       Rcpp::List arg_list)
+  BaselearnerCombinedFactoryWrapper (BaselearnerFactoryWrapper& blearner_1, BaselearnerFactoryWrapper& blearner_2, std::string blc)
   {
     // We need to converse the SEXP from the element to an integer:
-    int degree = 1;
     
-    std::string blearner_type_temp = "Combined_degree_";
+    std::string blearner_type_temp = blc;
     
     std::shared_ptr<blearnerfactory::BaselearnerFactory> ptr_blearner_1 = blearner_1.getFactory();
     std::shared_ptr<blearnerfactory::BaselearnerFactory> ptr_blearner_2 = blearner_2.getFactory();
@@ -1037,7 +1041,7 @@ RCPP_MODULE (baselearner_factory_module)
   
   class_<BaselearnerCombinedFactoryWrapper> ("BaselearnerCombined")
     .derives<BaselearnerFactoryWrapper> ("Baselearner")
-    .constructor<BaselearnerFactoryWrapper&, BaselearnerFactoryWrapper&, Rcpp::List> ()
+    .constructor<BaselearnerFactoryWrapper&, BaselearnerFactoryWrapper&, std::string> ()
   
   .method("summarizeFactory", &BaselearnerCombinedFactoryWrapper::summarizeFactory, "Summarize Factory")
   ;
