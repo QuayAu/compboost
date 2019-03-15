@@ -441,13 +441,13 @@ Compboost = R6::R6Class("Compboost",
         stop("No base-learners can be added after training is started")
       }
 
-      # Clear base-learners which are within the bl_list but not registered:
-      idx_remove = ! names(private$bl_list) %in% self$bl_factory_list$getRegisteredFactoryNames()
-      if (any(idx_remove)) {
-        for (i in which(idx_remove)) {
-          private$bl_list[[i]] = NULL
-        }
-      }
+      # # Clear base-learners which are within the bl_list but not registered:
+      # idx_remove = ! names(private$bl_list) %in% self$bl_factory_list$getRegisteredFactoryNames()
+      # if (any(idx_remove)) {
+      #   for (i in which(idx_remove)) {
+      #     private$bl_list[[i]] = NULL
+      #   }
+      # }
       
       # Check if the response functional data
       if(class(self$response) %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
@@ -567,13 +567,13 @@ Compboost = R6::R6Class("Compboost",
       data_source = InMemoryData
       data_target = InMemoryData
       
-      # Clear base-learners which are within the bl_list but not registered:
-      idx_remove = ! names(private$bl_list) %in% self$bl_factory_list$getRegisteredFactoryNames()
-      if (any(idx_remove)) {
-        for (i in which(idx_remove)) {
-          private$bl_list[[i]] = NULL
-        }
-      }
+      # # Clear base-learners which are within the bl_list but not registered:
+      # idx_remove = ! names(private$bl_list) %in% self$bl_factory_list$getRegisteredFactoryNames()
+      # if (any(idx_remove)) {
+      #   for (i in which(idx_remove)) {
+      #     private$bl_list[[i]] = NULL
+      #   }
+      # }
       
       # Check if the response functional data
       if(class(self$response) != "Rcpp_ResponseFDA"){
@@ -798,7 +798,7 @@ Compboost = R6::R6Class("Compboost",
     oob_idx = NULL,
     train_idx = NULL,
     initializeModel = function() {
-      browser()
+
       private$logger_list = LoggerList$new()
       lapply(private$l_list, function (logger) { private$logger_list$registerLogger(logger) })
       self$model = Compboost_internal$new(self$response, self$learning_rate,

@@ -450,7 +450,6 @@ ResponseFDALong::ResponseFDALong (std::vector<std::string>& target_name0, arma::
     arma::mat temp = response0(i);
     temp.reshape(temp.n_elem,1);
     response = arma::join_cols(response, temp);
-    Rcpp::Rcout << "Bing " << i << std::endl;
   }
   grid = arma::mat();
   grid_field = grid0;
@@ -511,7 +510,7 @@ void ResponseFDALong::initializePrediction ()
 void ResponseFDALong::updatePseudoResiduals (std::shared_ptr<loss::Loss> sh_ptr_loss)
 {
   checkLossCompatibility(sh_ptr_loss);
-  weights = weights.each_row() % trapez_weights.t();
+  weights = weights % trapez_weights;
   pseudo_residuals = sh_ptr_loss->calculateWeightedPseudoResiduals(response, prediction_scores, weights);
 }
 

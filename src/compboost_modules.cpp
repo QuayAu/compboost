@@ -324,6 +324,11 @@ public:
   {
     internal_arg_list = helper::argHandler(internal_arg_list, arg_list, TRUE);
 
+    // We need to converse the SEXP from the element to an integer:
+    int degree = internal_arg_list["degree"];
+    
+    std::string blearner_type_temp = "polynomial_degree_" + std::to_string(degree);
+    
     sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPolynomialFactory>(blearner_type, data_source.getDataObj(),
       data_target.getDataObj(), internal_arg_list["degree"], internal_arg_list["intercept"]);
   }
