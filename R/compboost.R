@@ -508,8 +508,7 @@ Compboost = R6::R6Class("Compboost",
       private$bl_list[[bln]]$source = data_source
       private$bl_list[[bln]]$feature = bln
       private$bl_list[[bln]]$target = data_target
-      private$bl_list[[bln]]$factory = BaselearnerTargetOnly$new(data_source, data_target,id_fac,
-                                                                 list(degree = 1, intercept = TRUE))
+      private$bl_list[[bln]]$factory = BaselearnerTargetOnly$new(data_source, data_target,id_fac)
       self$bl_factory_list$registerFactoryShort(private$bl_list[[bln]]$factory)
       
       if(!keep){

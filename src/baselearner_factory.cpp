@@ -20,6 +20,7 @@
 
 #include "baselearner_factory.h"
 #include "tensors.h"
+#include "data.h"
 
 namespace blearnerfactory {
 
@@ -377,11 +378,54 @@ arma::mat BaselearnerPSplineFactory::instantiateData (const arma::mat& newdata) 
 
 /// ---------------------------------------------------------------------------------------------- ///
 
+BaselearnerCombinedFactory::BaselearnerCombinedFactory (const std::string& blearner_type0, 
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_1, std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_2)
+{
+  blearner_type = blearner_type0;
+  
+  // Get data from both learners
+  arma::mat bl1_mat = blearner_1->getData();
+  arma::mat bl2_mat = blearner_2->getData();
+
+  // calculate new design matrix
+  arma::mat blc_mat = tensors::rowWiseKronecker(bl1_mat,bl2_mat);
+  
+  data::InMemoryData blc_mat_inmem = data::InMemoryData(blc_mat, "bl1");
+  data_target = std::make_shared<data::InMemoryData>(blc_mat_inmem) ;
+  
+  data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData());
+  
+  // blearner_type = blearner_type + " with degree " + std::to_string(degree);
+}
+
+std::shared_ptr<blearner::Baselearner> BaselearnerCombinedFactory::createBaselearner (const std::string& identifier)
+{
+  std::shared_ptr<blearner::Baselearner>  sh_ptr_blearner = std::make_shared<blearner::BaselearnerCombined>(data_target, identifier);
+  sh_ptr_blearner->setBaselearnerType(blearner_type);
+  
+  return sh_ptr_blearner;
+}
+
+arma::mat BaselearnerCombinedFactory::getData () const
+{
+  // In the case of p = 1 we have to treat the getData() function differently
+  // due to the saved and already transformed data without intercept. This
+  // is annoying but improves performance of the fitting process.
+    return data_target->getData();
+}
+
+// Transform data. This is done twice since it makes the prediction
+// of the whole compboost object so much easier:
+arma::mat BaselearnerCombinedFactory::instantiateData (const arma::mat& newdata) const
+{
+  return newdata;
+}
+
+
+/// ---------------------------------------------------------------------------------------------- ///
+
 BaselearnerTargetOnlyFactory::BaselearnerTargetOnlyFactory (const std::string& blearner_type0,
-                                                            std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0, const unsigned int& degree,
-                                                            const bool& intercept)
-  : degree ( degree ),
-    intercept ( intercept )
+  std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0)
 {
   blearner_type = blearner_type0;
   
@@ -395,40 +439,14 @@ BaselearnerTargetOnlyFactory::BaselearnerTargetOnlyFactory (const std::string& b
 
 std::shared_ptr<blearner::Baselearner> BaselearnerTargetOnlyFactory::createBaselearner (const std::string& identifier)
 {
-  std::shared_ptr<blearner::Baselearner>  sh_ptr_blearner = std::make_shared<blearner::BaselearnerTargetOnly>(data_target, identifier, degree, intercept);
+  std::shared_ptr<blearner::Baselearner>  sh_ptr_blearner = std::make_shared<blearner::BaselearnerTargetOnly>(data_target, identifier);
   sh_ptr_blearner->setBaselearnerType(blearner_type);
   
-  // // Check if the data is already set. If not, run 'instantiateData' from the
-  // // baselearner:
-  // if (! is_data_instantiated) {
-  //   data = sh_ptr_blearner->instantiateData();
-  //
-  //   is_data_instantiated = true;
-  //
-  //   // update baselearner type:
-  //   blearner_type = blearner_type + " with degree " + std::to_string(degree);
-  // }
   return sh_ptr_blearner;
 }
 
-/**
- * \brief Data getter which always returns an arma::mat
- *
- * This function is important to have a unified interface to access the data
- * matrices. Especially for predicting we have to get the data of each factory
- * as dense matrix. This is a huge drawback in terms of memory usage. Therefore,
- * this function should only be used to get temporary matrices which are deleted
- * when they run out of scope to reduce memory load. Also note that there is a
- * dispatch with the getData() function of the Data objects which are mostly
- * called internally.
- *
- * \returns `arma::mat` of data used for modelling a single base-learner
- */
 arma::mat BaselearnerTargetOnlyFactory::getData () const
 {
-  // In the case of p = 1 we have to treat the getData() function differently
-  // due to the saved and already transformed data without intercept. This
-  // is annoying but improves performance of the fitting process.
     return data_target->getData();
 }
 
@@ -438,6 +456,7 @@ arma::mat BaselearnerTargetOnlyFactory::instantiateData (const arma::mat& newdat
 {
   return newdata;
 }
+
 
 /// ---------------------------------------------------------------------------------------------- ///
 

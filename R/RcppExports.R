@@ -250,8 +250,8 @@ NULL
 #'
 #' @section Usage:
 #' \preformatted{
-#' BaselearnerTargetOnly$new(data_source, data_target, list(degree, intercept))
-#' BaselearnerTargetOnly$new(data_source, data_target, blearner_type, list(degree, intercept))
+#' BaselearnerTargetOnly$new(data_source, data_target)
+#' BaselearnerTargetOnly$new(data_source, data_target, blearner_type)
 #' }
 #'
 #' @section Arguments:
@@ -320,6 +320,89 @@ NULL
 #' lin_factory_int$transformData(data_mat)
 #'
 #' @export BaselearnerTargetOnly
+NULL
+
+#' Base-learner factory to make Combined regression
+#'
+#' \code{BaselearnerCombined} creates a Combined base-learner factory
+#'  object which can be registered within a base-learner list and then used
+#'  for training.
+#'
+#' @format \code{\link{S4}} object.
+#' @name BaselearnerCombined
+#'
+#' @section Usage:
+#' \preformatted{
+#' BaselearnerCombined$new(data_source, data_target)
+#' BaselearnerCombined$new(data_source, data_target, blearner_type)
+#' }
+#'
+#' @section Arguments:
+#' \describe{
+#' \item{\code{data_source} [\code{Data} Object]}{
+#'   Data object which contains the source data.
+#' }
+#' \item{\code{data_target} [\code{Data} Object]}{
+#'   Data object which gets the transformed source data.
+#' }
+#' \item{\code{degree} [\code{integer(1)}]}{
+#'   This argument is used for transforming the source data. Each element is
+#'   taken to the power of the \code{degree} argument.
+#' }
+#' \item{\code{intercept} [\code{logical(1)}]}{
+#'   Indicating whether an intercept should be added or not. Default is set to TRUE.
+#' }
+#' }
+#'
+#'
+#' @section Details:
+#'   The Combined base-learner factory takes any matrix which the user wants
+#'   to pass the number of columns indicates how much parameter are estimated.
+#'   Note that the intercept isn't added by default. To get an intercept add a
+#'   column of ones to the source data matrix.
+#'
+#'   This class is a wrapper around the pure \code{C++} implementation. To see
+#'   the functionality of the \code{C++} class visit
+#'   \url{https://schalkdaniel.github.io/compboost/cpp_man/html/classblearnerfactory_1_1_Combined_blearner_factory.html}.
+#'
+#' @section Fields:
+#'   This class doesn't contain public fields.
+#'
+#' @section Methods:
+#' \describe{
+#' \item{\code{getData()}}{Get the data matrix of the target data which is used
+#'   for m<odeling.}
+#' \item{\code{transformData(X)}}{Transform a data matrix as defined within the
+#'   factory. The argument has to be a matrix with one column.}
+#' \item{\code{summarizeFactory()}}{Summarize the base-learner factory object.}
+#' }
+#' @examples
+#' # Sample data:
+#' data_mat = cbind(1:10)
+#'
+#' # Create new data object:
+#' data_source = InMemoryData$new(data_mat, "my_data_name")
+#' data_target1 = InMemoryData$new()
+#' data_target2 = InMemoryData$new()
+#'
+#' # Create new linear base-learner factory:
+#' lin_factory = BaselearnerCombined$new(data_source, data_target1,
+#'   list(degree = 2, intercept = FALSE))
+#' lin_factory_int = BaselearnerCombined$new(data_source, data_target2,
+#'   list(degree = 2, intercept = TRUE))
+#'
+#' # Get the transformed data:
+#' lin_factory$getData()
+#' lin_factory_int$getData()
+#'
+#' # Summarize factory:
+#' lin_factory$summarizeFactory()
+#'
+#' # Transform data manually:
+#' lin_factory$transformData(data_mat)
+#' lin_factory_int$transformData(data_mat)
+#'
+#' @export BaselearnerCombined
 NULL
 
 #' Create custom base-learner factory by using R functions.

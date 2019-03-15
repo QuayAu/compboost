@@ -344,10 +344,7 @@ BaselearnerPSpline::~BaselearnerPSpline () {}
 // BaselearnerTargetOnly:
 // -----------------------
 
-BaselearnerTargetOnly::BaselearnerTargetOnly (std::shared_ptr<data::Data> data, const std::string& identifier,
-                                              const unsigned int& degree, const bool& intercept)
-  : degree ( degree ),
-    intercept ( intercept )
+BaselearnerTargetOnly::BaselearnerTargetOnly (std::shared_ptr<data::Data> data, const std::string& identifier)
 {
   // Called from parent class 'Baselearner':
   Baselearner::setData(data);
@@ -396,6 +393,50 @@ arma::mat BaselearnerTargetOnly::predict (std::shared_ptr<data::Data> newdata) c
 
 // Destructor:
 BaselearnerTargetOnly::~BaselearnerTargetOnly () {}
+
+// BaselearnerCombined:
+// -----------------------
+
+BaselearnerCombined::BaselearnerCombined (std::shared_ptr<data::Data> data, const std::string& identifier)
+{
+  // Called from parent class 'Baselearner':
+  Baselearner::setData(data);
+  Baselearner::setIdentifier(identifier);
+}
+
+// Copy member:
+Baselearner* BaselearnerCombined::clone ()
+{
+  Baselearner* newbl = new BaselearnerCombined(*this);
+  newbl->copyMembers(this->parameter, this->blearner_identifier, this->sh_ptr_data);
+  
+  return newbl;
+}
+
+arma::mat BaselearnerCombined::instantiateData (const arma::mat& newdata) const
+{
+  return newdata;
+}
+
+// Train the learner:
+void BaselearnerCombined::train (const arma::mat& response)
+{
+  // parameter = arma::solve(sh_ptr_data->getData(), response);
+  parameter = sh_ptr_data->XtX_inv * sh_ptr_data->getData().t() * response;
+}
+
+// Predict the learner:
+arma::mat BaselearnerCombined::predict () const
+{
+  return sh_ptr_data->getData() * parameter;
+}
+arma::mat BaselearnerCombined::predict (std::shared_ptr<data::Data> newdata) const
+{
+  return instantiateData(newdata->getData()) * parameter;
+}
+
+// Destructor:
+BaselearnerCombined::~BaselearnerCombined () {}
 
 
 // BaselearnerCustom:

@@ -200,12 +200,10 @@ public:
 class BaselearnerTargetOnly : public Baselearner
 {
 private:
-  unsigned int degree;
-  bool intercept;
   
 public:
   // (data pointer, data identifier, baselearner identifier, degree)
-  BaselearnerTargetOnly (std::shared_ptr<data::Data>, const std::string&, const unsigned int&, const bool&);
+  BaselearnerTargetOnly (std::shared_ptr<data::Data>, const std::string&);
   
   Baselearner* clone ();
   
@@ -220,7 +218,33 @@ public:
   
 };
 
+// BaselearnerCombined:
+// -----------------------
 
+
+// This baselearner trains a linear model without intercept and covariable
+// x^degree:
+
+class BaselearnerCombined : public Baselearner
+{
+private:
+  
+public:
+  // (data pointer, data identifier, baselearner identifier, degree)
+  BaselearnerCombined (std::shared_ptr<data::Data>, const std::string&);
+  
+  Baselearner* clone ();
+  
+  // arma::mat instantiateData ();
+  arma::mat instantiateData (const arma::mat&) const;
+  
+  void train (const arma::mat&);
+  arma::mat predict () const;
+  arma::mat predict (std::shared_ptr<data::Data>) const;
+  
+  ~BaselearnerCombined ();
+  
+};
 
 // BaselearnerCustom:
 // -----------------------

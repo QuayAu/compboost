@@ -169,14 +169,10 @@ public:
 class BaselearnerTargetOnlyFactory : public BaselearnerFactory
 {
 private:
-  
-  const unsigned int degree;
-  bool intercept;
-  
+
 public:
   
-  BaselearnerTargetOnlyFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>, const unsigned int&,
-                                const bool&);
+  BaselearnerTargetOnlyFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>);
   
   std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
   
@@ -186,6 +182,25 @@ public:
   arma::mat instantiateData (const arma::mat&) const;
 };
 
+// BaselearnerCombinedFactory:
+// -----------------------------
+
+class BaselearnerCombinedFactory : public BaselearnerFactory
+{
+private:
+
+public:
+  
+  BaselearnerCombinedFactory (const std::string&, std::shared_ptr<blearnerfactory::BaselearnerFactory>, 
+    std::shared_ptr<blearnerfactory::BaselearnerFactory>);
+  
+  std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
+  
+  /// Get data used for modeling
+  arma::mat getData() const;
+  
+  arma::mat instantiateData (const arma::mat&) const;
+};
 
 // BaselearnerCustomFactory:
 // -----------------------------
