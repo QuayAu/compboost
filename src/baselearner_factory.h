@@ -157,8 +157,14 @@ public:
     const unsigned int&, const unsigned int&, const double&,
     const unsigned int&, const bool&);
   
+  BaselearnerPSplineFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>,
+    arma::field<arma::mat>, const unsigned int&, const unsigned int&, const double&,
+    const unsigned int&, const bool&);
+  
   /// Create new `BaselearnerPSpline` object
   std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
+  
+  arma::field<arma::mat> grid_mat;
 
   /// Get data used for modelling
   arma::mat getData() const;

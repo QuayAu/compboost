@@ -432,7 +432,7 @@ private:
     Rcpp::Named("n_knots") = 20,
     Rcpp::Named("penalty") = 2,
     Rcpp::Named("differences") = 2,
-    Rcpp::Named("id_fac") = " "
+    Rcpp::Named("id_fac") = ""
   );
 
 public:
@@ -454,12 +454,13 @@ public:
   }
 
   BaselearnerPSplineFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target,
-    const std::string& blearner_type, Rcpp::List arg_list)
+    arma::field<arma::mat> grid_mat, Rcpp::List arg_list)
   {
     internal_arg_list = helper::argHandler(internal_arg_list, arg_list, TRUE);
+    std::string blearner_type_temp = internal_arg_list["id_fac"];
 
-    sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPSplineFactory>(blearner_type, data_source.getDataObj(),
-      data_target.getDataObj(), internal_arg_list["degree"], internal_arg_list["n_knots"],
+    sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPSplineFactory>(blearner_type_temp, data_source.getDataObj(),
+      data_target.getDataObj(),grid_mat, internal_arg_list["degree"], internal_arg_list["n_knots"],
       internal_arg_list["penalty"], internal_arg_list["differences"], TRUE);
   }
   
@@ -1005,7 +1006,7 @@ RCPP_MODULE (baselearner_factory_module)
   class_<BaselearnerPSplineFactoryWrapper> ("BaselearnerPSpline")
     .derives<BaselearnerFactoryWrapper> ("Baselearner")
     .constructor<DataWrapper&, DataWrapper&, Rcpp::List> ()
-    .constructor<DataWrapper&, DataWrapper&, std::string, Rcpp::List> ()
+    .constructor<DataWrapper&, DataWrapper&, arma::field<arma::mat>, Rcpp::List> ()
 
     .method("summarizeFactory", &BaselearnerPSplineFactoryWrapper::summarizeFactory, "Summarize Factory")
   ;

@@ -457,7 +457,7 @@ Compboost = R6::R6Class("Compboost",
       if(class(self$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
         # FDA case - kronecker each learn with grid baselearner
         if(bl_factory == BaselearnerPSpline){
-          stop("PSplines are currently not supported as covriates.")
+          warning("Functional PSplines are in alpha.")
         }
         
         data_columns = self$data[, feature, drop = FALSE]
@@ -597,7 +597,7 @@ Compboost = R6::R6Class("Compboost",
       # Check if the response functional data
       if(class(self$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
          # FDA case - kronecker each learn with grid baselearner
-        private$addSingleNumericBl(data_columns = data_columns, feature = feature, id = id, bl_factory = bl_factory,
+        private$addSingleNumericBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
           data_source = data_source, data_target = data_target, grid_mat = self$grid_mat, degree = 1, intercept = FALSE)
       } else {
           private$addSingleNumericBl(data_columns, feature, id, id_fac, bl_factory,

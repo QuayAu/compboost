@@ -299,6 +299,57 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
   }
 }
 
+BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearner_type0,
+  std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0,
+  arma::field<arma::mat> grid_mat0, const unsigned int& degree, const unsigned int& n_knots, 
+  const double& penalty, const unsigned int& differences, const bool& use_sparse_matrices)
+  : degree ( degree ),
+    n_knots ( n_knots ),
+    penalty ( penalty ),
+    differences ( differences ),
+    use_sparse_matrices ( use_sparse_matrices )
+{
+  blearner_type = blearner_type0;
+  // Set data, data identifier and the data_mat (dense at this stage)
+  data_source = data_source0;
+  data_target = data_target0;
+  grid_mat = grid_mat0;
+
+  // This is necessary to prevent the program from segfolds... whyever???
+  // Copied from: http://lists.r-forge.r-project.org/pipermail/rcpp-devel/2012-November/004796.html
+  try {
+    if (data_source->getData().n_cols > 1) {
+      Rcpp::stop("Given data should have just one column.");
+    }
+  } catch ( std::exception &ex ) {
+    forward_exception_to_r( ex );
+  } catch (...) {
+    ::Rf_error( "c++ exception (unknown reason)" );
+  }
+  // Initialize knots:
+  data_target->knots = splines::createKnots(data_source->getData(), n_knots, degree);
+
+  // Additionally set the penalty matrix:
+  penalty_mat = penalty * splines::penaltyMat(n_knots + (degree + 1), differences);
+
+  // Make sure that the data identifier is setted correctly:
+  data_target->setDataIdentifier(data_source->getDataIdentifier());
+
+  // Get the data of the source, transform it and write it into the target. This needs some explanations:
+  //   - If we use sparse matrices we want to store the sparse matrix into the sparse data matrix member of
+  //     the data object. This also requires to adopt getData() for that purpose.
+  //   - To get some (very) nice speed ups we store the transposed matrix not the standard one. This also
+  //     affects how the training in baselearner.cpp is done. Nevertheless, this speed up things dramatically.
+  if (use_sparse_matrices) {
+    data_target->sparse_data_mat = splines::createSparseSplineBasis (data_source->getData(), degree, data_target->knots).t();
+    data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty_mat);
+  } else {
+    data_target->setData(instantiateData(data_source->getData()));
+    data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData() + penalty_mat);
+  }
+}
+
+
 
 
 
@@ -358,8 +409,6 @@ arma::mat BaselearnerPSplineFactory::getPenalty () const
   return penalty_mat;
 }
 
-
-
 /**
  * \brief Instantiate data matrix (design matrix)
  *
@@ -386,6 +435,42 @@ arma::mat BaselearnerPSplineFactory::instantiateData (const arma::mat& newdata) 
   // Data object has to be created prior! That means that data_ptr must have
   // initialized knots, and penalty matrix!
   arma::mat out = splines::createSplineBasis (temp, degree, data_target->knots);
+  
+  
+  // grid_mat is a field of pointers to inMemoryData matrices
+  // grid_mat(0)->getData().n_cols 
+  // take first element of field (a pointer)
+  // dereference pointer, get an inMemoryData obj
+  // getData(), receive a matrix
+  // Case one: same grid, all on the same t-spline
+  if(grid_mat.n_elem == 1) {
+    arma::mat data_kroned = arma::zeros(out.n_rows,out.n_cols*grid_mat(0).n_cols);
+    
+    int grid_n = grid_mat(0).n_rows;
+    
+    for(int i = 0; i <= out.n_rows - grid_n; i = i + grid_n) {
+      data_kroned.rows(i,(i-1 + grid_n)) = tensors::rowWiseKronecker(grid_mat(0),out.rows(i,(i-1 + grid_n)));
+    }
+    out = data_kroned;
+
+  }
+
+  // Case two: different grids, sepearte t-splines
+  if(grid_mat.n_elem > 1) {
+    arma::mat data_kroned = arma::mat();
+    
+    int row_tracker = 0;
+    for(int g; g < grid_mat.n_elem; g++){
+        int grid_n = grid_mat(g).n_rows;
+        arma::mat g_kroned = tensors::rowWiseKronecker(grid_mat(g), out.rows(row_tracker,(row_tracker-1 + grid_n)));
+        data_kroned = arma::join_cols(data_kroned, g_kroned);
+        row_tracker = row_tracker + grid_n;
+    }
+    temp = data_kroned;
+  }
+  
+  temp = out;
+  
   return out;
 }
 
