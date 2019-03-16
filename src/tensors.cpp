@@ -47,7 +47,7 @@ arma::mat penaltySumKronecker (const arma::mat& Pa, const arma::mat& Pb)
 
 
   // sum of Kroneckers with diagonal marices
-  out = arma::kron(Pa,eyePa) + arma::kron(eyePb, Pb);
+  out = arma::kron(Pb,eyePa) + arma::kron(eyePb, Pa);
 
   return out;
 }

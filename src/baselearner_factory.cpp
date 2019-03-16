@@ -43,6 +43,12 @@ std::string BaselearnerFactory::getBaselearnerType() const
   return blearner_type;
 }
 
+arma::mat BaselearnerFactory::getPenalty() const
+{
+    arma::mat penalty_mat = 0 * splines::penaltyMat(data_target->getData().n_cols, 1);
+    return penalty_mat;
+}
+
 void BaselearnerFactory::initializeDataObjects (std::shared_ptr<data::Data> data_source0,
   std::shared_ptr<data::Data> data_target0)
 {
@@ -65,7 +71,7 @@ BaselearnerFactory::~BaselearnerFactory () {}
 // BaselearnerPolynomial:
 // -----------------------
 
-BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string& blearner_type0,
+BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string blearner_type0,
   std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0, const unsigned int& degree,
   const bool& intercept)
   : degree ( degree ),
@@ -103,7 +109,7 @@ BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string& b
 }
 
 
-BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string& blearner_type0,
+BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string blearner_type0,
   std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0, 
   arma::field<arma::mat> grid_mat0, const unsigned int& degree, const bool& intercept)
   : degree ( degree ),
@@ -197,7 +203,7 @@ arma::mat BaselearnerPolynomialFactory::instantiateData (const arma::mat& newdat
     int grid_n = grid_mat(0).n_rows;
     
     for(int i = 0; i <= temp.n_rows - grid_n; i = i + grid_n) {
-      data_kroned.rows(i,(i-1 + grid_n)) = tensors::rowWiseKronecker(grid_mat0(live),temp.rows(i,(i-1 + grid_n)));
+      data_kroned.rows(i,(i-1 + grid_n)) = tensors::rowWiseKronecker(grid_mat(0),temp.rows(i,(i-1 + grid_n)));
     }
     temp = data_kroned;
 
@@ -274,7 +280,7 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
   data_target->knots = splines::createKnots(data_source->getData(), n_knots, degree);
 
   // Additionally set the penalty matrix:
-  data_target->penalty_mat = splines::penaltyMat(n_knots + (degree + 1), differences);
+  penalty_mat = penalty * splines::penaltyMat(n_knots + (degree + 1), differences);
 
   // Make sure that the data identifier is setted correctly:
   data_target->setDataIdentifier(data_source->getDataIdentifier());
@@ -286,10 +292,10 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
   //     affects how the training in baselearner.cpp is done. Nevertheless, this speed up things dramatically.
   if (use_sparse_matrices) {
     data_target->sparse_data_mat = splines::createSparseSplineBasis (data_source->getData(), degree, data_target->knots).t();
-    data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty * data_target->penalty_mat);
+    data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty_mat);
   } else {
     data_target->setData(instantiateData(data_source->getData()));
-    data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData() + penalty * data_target->penalty_mat);
+    data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData() + penalty_mat);
   }
 }
 
@@ -347,6 +353,13 @@ arma::mat BaselearnerPSplineFactory::getData () const
   }
 }
 
+arma::mat BaselearnerPSplineFactory::getPenalty () const
+{
+  return penalty_mat;
+}
+
+
+
 /**
  * \brief Instantiate data matrix (design matrix)
  *
@@ -386,14 +399,19 @@ BaselearnerCombinedFactory::BaselearnerCombinedFactory (const std::string& blear
   // Get data from both learners
   arma::mat bl1_mat = blearner_1->getData();
   arma::mat bl2_mat = blearner_2->getData();
-
-  // calculate new design matrix
+  
+  arma::mat bl1_pen = blearner_1->getPenalty();
+  arma::mat bl2_pen = blearner_2->getPenalty();
+  
+  // calculate new design matrix and Design Matrix
   arma::mat blc_mat = tensors::rowWiseKronecker(bl1_mat,bl2_mat);
+  arma::mat blc_pen = tensors::penaltySumKronecker(bl1_pen, bl2_pen);
   
-  data::InMemoryData blc_mat_inmem = data::InMemoryData(blc_mat, "blearner_type");
-  data_target = std::make_shared<data::InMemoryData>(blc_mat_inmem) ;
+  // put into memory
+  data_source = std::make_shared<data::InMemoryData>(data::InMemoryData(blc_mat, "combined"));
+  data_target = std::make_shared<data::InMemoryData>(data::InMemoryData(blc_mat, "combined"));
   
-  data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData());
+  data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData() + blc_pen);
   
   // blearner_type = blearner_type + " with degree " + std::to_string(degree);
 }

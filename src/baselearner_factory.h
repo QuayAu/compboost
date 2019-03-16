@@ -70,6 +70,7 @@ public:
 
   virtual arma::mat instantiateData (const arma::mat&) const = 0;
   virtual arma::mat getData() const = 0;
+  virtual arma::mat getPenalty() const;
 
   void initializeDataObjects (std::shared_ptr<data::Data>, std::shared_ptr<data::Data>);
 
@@ -101,10 +102,10 @@ private:
 
 public:
 
-  BaselearnerPolynomialFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>, const unsigned int&,
+  BaselearnerPolynomialFactory (const std::string, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>, const unsigned int&,
     const bool&);
   
-  BaselearnerPolynomialFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>, 
+  BaselearnerPolynomialFactory (const std::string, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>, 
     arma::field<arma::mat>, const unsigned int&, const bool&);
 
   std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
@@ -142,6 +143,9 @@ private:
 
   /// Order of differences used for penalty matrix
   const unsigned int differences;
+  
+  /// Order of differences used for penalty matrix
+  arma::mat penalty_mat;
 
   /// Flag if sparse matrices should be used:
   const bool use_sparse_matrices;
@@ -158,6 +162,9 @@ public:
 
   /// Get data used for modelling
   arma::mat getData() const;
+  
+  /// Get penalty matrix used for modelling
+  arma::mat getPenalty() const;
 
   /// Instantiate the design matrix
   arma::mat instantiateData (const arma::mat&) const;

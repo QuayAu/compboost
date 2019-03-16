@@ -423,6 +423,10 @@ Compboost = R6::R6Class("Compboost",
         }
         self$grid_mat = grid_mats
       }
+      
+      if("combined_baselearner_placeholder" %in% names(self$data)){
+        stop("combined_baselearner_placeholder cannot be a variable name - please adjust.")
+      }
 
     },
     addLogger = function(logger, use_as_stopper = FALSE, logger_id, ...) {
@@ -574,9 +578,9 @@ Compboost = R6::R6Class("Compboost",
         stop("No base-learners can be added after training is started")
       }
 
-      feature = "ONE"
-      id = "intercept"
-      id_fac = "ONE"
+      feature = "INTERCEPT"
+      id = "INTERCEPT"
+      id_fac = "INTERCEPT"
       data_source = InMemoryData
       data_target = InMemoryData
       bl_factory = BaselearnerPolynomial
@@ -818,6 +822,9 @@ Compboost = R6::R6Class("Compboost",
     },
     addSingleNumericBl = function(data_columns, feature, id_fac, id, bl_factory, data_source, data_target, grid_mat, ...) {
 
+      dots = list(...)
+      dots$id_fac = id_fac
+      
       private$bl_list[[id]] = list()
       private$bl_list[[id]]$source = data_source$new(as.matrix(data_columns), paste(feature, collapse = "_"))
       private$bl_list[[id]]$feature = feature
@@ -827,9 +834,10 @@ Compboost = R6::R6Class("Compboost",
       if(class(self$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
         # Call Constructer with grid_mat in FDA case
         private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target,
-          self$grid_mat, list(...))
+          self$grid_mat, dots)
       } else{
-        private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target, list(...))
+        private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target,
+         dots)
       }
       self$bl_factory_list$registerFactory(private$bl_list[[id]]$factory)
       private$bl_list[[id]]$source = NULL

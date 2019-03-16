@@ -284,7 +284,8 @@ class BaselearnerPolynomialFactoryWrapper : public BaselearnerFactoryWrapper
 private:
   Rcpp::List internal_arg_list = Rcpp::List::create(
     Rcpp::Named("degree") = 1,
-    Rcpp::Named("intercept") = true
+    Rcpp::Named("intercept") = true,
+    Rcpp::Named("id_fac") = ""
   );
 
 public:
@@ -297,10 +298,8 @@ public:
 
     // We need to converse the SEXP from the element to an integer:
     int degree = internal_arg_list["degree"];
+    std::string blearner_type_temp = internal_arg_list["id_fac"];
 
-    std::string blearner_type_temp = "polynomial_degree_" + std::to_string(degree);
-
-    Rcpp::Rcout << "Wrapper 1";
     sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPolynomialFactory>(blearner_type_temp, data_source.getDataObj(),
       data_target.getDataObj(), internal_arg_list["degree"], internal_arg_list["intercept"]);
   }
@@ -314,29 +313,10 @@ public:
     // We need to converse the SEXP from the element to an integer:
     int degree = internal_arg_list["degree"];
     
-    Rcpp::Rcout << "Wrapper 2";
-    
-    std::string blearner_type_temp = "polynomial_degree_" + std::to_string(degree);
+    std::string blearner_type_temp = internal_arg_list["id_fac"];
     
     sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPolynomialFactory>(blearner_type_temp, data_source.getDataObj(),
       data_target.getDataObj(), grid_mat, internal_arg_list["degree"], internal_arg_list["intercept"]);
-  }
-
-  BaselearnerPolynomialFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target,
-    const std::string blearner_type, Rcpp::List arg_list)
-  {
-    internal_arg_list = helper::argHandler(internal_arg_list, arg_list, TRUE);
-
-    // We need to converse the SEXP from the element to an integer:
-    int degree = internal_arg_list["degree"];
-    
-    
-        Rcpp::Rcout << "Wrapper 3";
-    
-    std::string blearner_type_temp = "polynomial_degree_" + std::to_string(degree);
-    
-    sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPolynomialFactory>(blearner_type, data_source.getDataObj(),
-      data_target.getDataObj(), internal_arg_list["degree"], internal_arg_list["intercept"]);
   }
 
   void summarizeFactory ()
@@ -451,7 +431,8 @@ private:
     Rcpp::Named("degree") = 3,
     Rcpp::Named("n_knots") = 20,
     Rcpp::Named("penalty") = 2,
-    Rcpp::Named("differences") = 2
+    Rcpp::Named("differences") = 2,
+    Rcpp::Named("id_fac") = " "
   );
 
 public:
@@ -460,11 +441,11 @@ public:
     Rcpp::List arg_list)
   {
     internal_arg_list = helper::argHandler(internal_arg_list, arg_list, TRUE);
+    
 
     // We need to converse the SEXP from the element to an integer:
-    int degree = internal_arg_list["degree"];
-
-    std::string blearner_type_temp = "spline_degree_" + std::to_string(degree);
+    int degree = internal_arg_list["degree"];    
+    std::string blearner_type_temp = internal_arg_list["id_fac"];
 
     sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPSplineFactory>(blearner_type_temp, data_source.getDataObj(),
        data_target.getDataObj(), internal_arg_list["degree"], internal_arg_list["n_knots"],
@@ -700,7 +681,6 @@ public:
   BaselearnerCombinedFactoryWrapper (BaselearnerFactoryWrapper& blearner_1, BaselearnerFactoryWrapper& blearner_2, std::string blc)
   {
     // We need to converse the SEXP from the element to an integer:
-    
     std::string blearner_type_temp = blc;
     
     std::shared_ptr<blearnerfactory::BaselearnerFactory> ptr_blearner_1 = blearner_1.getFactory();
@@ -1018,7 +998,6 @@ RCPP_MODULE (baselearner_factory_module)
     .derives<BaselearnerFactoryWrapper> ("Baselearner")
     .constructor<DataWrapper&, DataWrapper&, Rcpp::List> ()
     .constructor<DataWrapper&, DataWrapper&, arma::field<arma::mat>, Rcpp::List> ()
-    .constructor<DataWrapper&, DataWrapper&, std::string, Rcpp::List> ()
 
     .method("summarizeFactory", &BaselearnerPolynomialFactoryWrapper::summarizeFactory, "Summarize Factory")
   ;
@@ -2764,7 +2743,6 @@ public:
   Rcpp::List getEstimatedParameter ()
   {
     std::map<std::string, arma::mat> parameter = unique_ptr_cboost->getParameter();
-    Rcpp::Rcout << "Bing 1231";
     Rcpp::List out;
 
     for (auto &it : parameter) {
@@ -2788,7 +2766,6 @@ public:
   Rcpp::List getParameterMatrix ()
   {
     std::pair<std::vector<std::string>, arma::mat> out_pair = unique_ptr_cboost->getParameterMatrix();
-    Rcpp::Rcout << "Bing 12763";
     return Rcpp::List::create(
       Rcpp::Named("parameter_names")   = out_pair.first,
       Rcpp::Named("parameter_matrix")  = out_pair.second
@@ -2798,7 +2775,6 @@ public:
   arma::vec predict (Rcpp::List& newdata, bool as_response)
   {
     std::map<std::string, std::shared_ptr<data::Data>> data_map;
-    Rcpp::Rcout << "Bing 12543";
     for (unsigned int i = 0; i < newdata.size(); i++) {
       DataWrapper* temp = newdata[i];
       data_map[ temp->getDataObj()->getDataIdentifier() ] = temp->getDataObj();
