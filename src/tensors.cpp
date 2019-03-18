@@ -58,7 +58,7 @@ std::map<std::string, arma::mat>  centerDesignMatrix (const arma::mat& X1, const
 
   // Cross Product X1 and X2
   arma::mat cross = X1.t() * X2 ;
-
+  
   // QR decomp
   // We require and orthogonal matrix Q
   arma::mat R;
@@ -67,24 +67,22 @@ std::map<std::string, arma::mat>  centerDesignMatrix (const arma::mat& X1, const
 
   // get rank of R and add 1
   int rankR = arma::rank(R);
-
+  
   // construct Z from rows 0 to last row and column R+1 to last column
-  arma::mat Z = Q( arma::span(0, Q.n_rows-1), arma::span(rankR, Q.n_cols-1) );
-
+  arma::mat Z = Q.cols(rankR,Q.n_cols-1);
+  
   // Construct the rotated X1
   arma::mat X1_out = X1 * Z;
-
+  
   // Construct the rotated Penalty Matrix
   arma::mat P1_out = Z.t() * P1 * Z;
 
   // Construct out
   std::map<std::string, arma::mat> out;
-  out["X1"] = X1_out;
-  out["P1"] = P1_out;
-
+  out["X"] = X1_out;
+  out["P"] = P1_out;
+  
   return out;
-
-  /// return X1_out;
 }
 
 

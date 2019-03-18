@@ -1,5 +1,5 @@
 calculateFeatEffectData = function (cboost_obj, bl_list, blearner_name, iters, from, to, length_out)
-{
+{ 
   if (is.null(cboost_obj$model)) {
     stop("Model needs to be trained first.")
   }
@@ -31,6 +31,7 @@ calculateFeatEffectData = function (cboost_obj, bl_list, blearner_name, iters, f
   checkmate::assertNumeric(from, lower =  min(cboost_obj$data[[feat_name]]), upper = max(cboost_obj$data[[feat_name]]), len = 1, null.ok = TRUE)
   checkmate::assertNumeric(to, lower =  min(cboost_obj$data[[feat_name]]), upper = max(cboost_obj$data[[feat_name]]), len = 1, null.ok = TRUE)
 
+  browser()
   if (is.null(from)) {
     from = min(cboost_obj$data[[feat_name]])
   }

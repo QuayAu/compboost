@@ -444,17 +444,10 @@ Compboost = R6::R6Class("Compboost",
       if (!is.null(self$model)) {
         stop("No base-learners can be added after training is started")
       }
-
-      # # Clear base-learners which are within the bl_list but not registered:
-      # idx_remove = ! names(private$bl_list) %in% self$bl_factory_list$getRegisteredFactoryNames()
-      # if (any(idx_remove)) {
-      #   for (i in which(idx_remove)) {
-      #     private$bl_list[[i]] = NULL
-      #   }
-      # }
       
       # Check if the response functional data
       if(class(self$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
+        
         # FDA case - kronecker each learn with grid baselearner
         if(bl_factory == BaselearnerPSpline){
           warning("Functional PSplines are in alpha.")
@@ -464,11 +457,11 @@ Compboost = R6::R6Class("Compboost",
         id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
         
         if (ncol(data_columns) == 1 && !is.numeric(data_columns[, 1])) {
-          private$addSingleCatBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
-            data_source = data_source, data_target = data_target, grid_mat = self$grid_mat, ...)
+          private$addSingleCatBl(data_columns, feature, id, id_fac, bl_factory,
+            data_source, data_target, self$grid_mat, ...)
         }	else {
-          private$addSingleNumericBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
-            data_source = data_source, data_target = data_target, grid_mat = self$grid_mat, ...)
+          private$addSingleNumericBl(data_columns, feature, id, id_fac, bl_factory,
+            data_source, data_target, self$grid_mat, ...)
         }
        
       } else {
@@ -533,7 +526,7 @@ Compboost = R6::R6Class("Compboost",
         private$bl_list[[bl2]] = NULL
       }
         
-    },CenterBaselearner = function(bl_target, bl_center){
+    },CenterBaselearner = function(bl_target, bl_center, keep = FALSE){
       # if(! bl_target %in% self$getBaselearnerNames()){
       #   stop("bl_target is not a registered Baselearner.")
       # }
@@ -542,37 +535,54 @@ Compboost = R6::R6Class("Compboost",
       # }
       # if(class(private$bl_list[[bl_target]]$factory) != class(private$bl_list[[bl_center]]$factory)){
       #   stop("Baselearners must be of the same kind to be combined.")
-      # }
+     if(! bl_target %in% self$getBaselearnerNames()){
+        stop("bl_target is not a registered Baselearner.")
+      }
+      if(! bl_center %in% self$getBaselearnerNames()){
+        stop("bl_center is not a registered Baselearner.")
+      }
+      if(!is.logical(keep)){
+        stop("keep must be logical.")
+      }
       
       # Get Design Matrices from both learners
-      bl_target_design_mat = private$bl_list[[bl_target]]$factory$getData()
-      bl_center_design_mat = private$bl_list[[bl_center]]$factory$getData()
-       
+      bl1_factory = private$bl_list[[bl_target]]$factory
+      bl2_factory = private$bl_list[[bl_center]]$factory
+  
       blc = paste0(bl_target,"_|_",bl_center)
-      
-      # calculate QR-decomposition
-      qr_x1x2 = qr(t(bl_target_design_mat)%*%bl_center_design_mat)
-      # get rank, which can be used to 
-      # determine the zero part of R
-      rank_x1x2 <- qr_x1x2$rank
-      # get Q
-      Q <- qr.Q(qr_x1x2, complete = TRUE)
-      # then Z is given by:
-      Z <- Q[, (rank_x1x2 + 1):ncol(Q)]
-      # and the we have    
-      blc_design_mat <- bl_target_design_mat %*% Z
-      
-      
-      blc_source = InMemoryData$new(as.matrix(blc_design_mat), blc)
-      blc_target = InMemoryData$new()
-      
-      private$bl_list[[bl_target]]$source = blc_source
-      private$bl_list[[bl_target]]$feature = blc
-      private$bl_list[[bl_target]]$target = blc_target
-      
-      private$bl_list[[blc]] = private$bl_list[[bl_target]]
-      private$bl_list[[bl_target]] = NULL
 
+      # Create Factory
+      centered_factory = BaselearnerCentered$new(private$bl_list[[bl_target]]$factory, private$bl_list[[bl_center]]$factory, blc)
+      data_target = InMemoryData$new(centered_factory$getData(), "data_target")
+     
+      # Manually register everything
+     
+      if(class(self$response) %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
+      
+        private$bl_list[[blc]] = list()
+        private$bl_list[[blc]]$source = data_target
+        private$bl_list[[blc]]$feature = blc
+        private$bl_list[[blc]]$target = data_target
+        private$bl_list[[blc]]$factory = centered_factory
+        self$bl_factory_list$registerFactoryShort(private$bl_list[[blc]]$factory)
+        
+      } else {
+        # FDA case - kronecker each learn with grid baselearner
+
+        private$bl_list[[blc]] = list()
+        private$bl_list[[blc]]$source = data_target
+        private$bl_list[[blc]]$feature = blc
+        private$bl_list[[blc]]$target = data_target
+        private$bl_list[[blc]]$factory = centered_factory
+        self$bl_factory_list$registerFactoryShort(private$bl_list[[blc]]$factory)
+        
+      }
+      
+      if(!keep){
+        private$bl_list[[bl_target]] = NULL
+        self$bl_factory_list$removeFactory(bl_target)
+      }
+        
     },addInterceptBaselearner = function() {
       if (!is.null(self$model)) {
         stop("No base-learners can be added after training is started")
@@ -594,15 +604,28 @@ Compboost = R6::R6Class("Compboost",
       #   }
       # }
       
-      # Check if the response functional data
+      dots = list()
+      dots$id_fac = id_fac
+      dots$intercept = FALSE
+      dots$degree = 1
+      
+      private$bl_list[[id]] = list()
+      private$bl_list[[id]]$source = data_source$new(as.matrix(data_columns), paste(feature, collapse = "_"))
+      private$bl_list[[id]]$feature = feature
+      private$bl_list[[id]]$target = data_target$new()
+      
+      
       if(class(self$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
-         # FDA case - kronecker each learn with grid baselearner
-        private$addSingleNumericBl(data_columns = data_columns, feature = feature, id = id, id_fac = id_fac, bl_factory = bl_factory,
-          data_source = data_source, data_target = data_target, grid_mat = self$grid_mat, degree = 1, intercept = FALSE)
-      } else {
-          private$addSingleNumericBl(data_columns, feature, id, id_fac, bl_factory,
-            data_source, data_target, degree = 1, intercept = FALSE)
+        # Call Constructer with grid_mat in FDA case
+        private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target,
+          self$grid_mat, dots)
+      } else{
+        private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target,
+         dots)
       }
+      self$bl_factory_list$registerFactoryShort(private$bl_list[[id]]$factory)
+      private$bl_list[[id]]$source = NULL
+      
       }, 
     train = function(iteration = 100, trace = -1) {
 

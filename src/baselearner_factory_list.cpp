@@ -40,6 +40,14 @@ void BaselearnerFactoryList::registerBaselearnerFactory (const std::string& fact
   }
 }
 
+// Register a factory:
+void BaselearnerFactoryList::removeBaselearnerFactory (const std::string& factory_id)
+{
+  // FIXME build a check for existence.
+  my_factory_map.erase(factory_id);
+}
+
+
 // Print all registered factories:
 void BaselearnerFactoryList::printRegisteredFactories () const
 {

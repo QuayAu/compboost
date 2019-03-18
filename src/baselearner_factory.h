@@ -144,7 +144,7 @@ private:
   /// Order of differences used for penalty matrix
   const unsigned int differences;
   
-  /// Order of differences used for penalty matrix
+  /// 
   arma::mat penalty_mat;
 
   /// Flag if sparse matrices should be used:
@@ -201,7 +201,8 @@ public:
 class BaselearnerCombinedFactory : public BaselearnerFactory
 {
 private:
-
+  /// 
+  arma::mat penalty_mat;
 public:
   
   BaselearnerCombinedFactory (const std::string&, std::shared_ptr<blearnerfactory::BaselearnerFactory>, 
@@ -212,8 +213,35 @@ public:
   /// Get data used for modeling
   arma::mat getData() const;
   
+  /// Get penalty matrix used for modelling
+  arma::mat getPenalty() const;
+  
   arma::mat instantiateData (const arma::mat&) const;
 };
+
+
+class BaselearnerCenteredFactory : public BaselearnerFactory
+{
+private:
+  /// 
+  arma::mat penalty_mat;
+public:
+  
+  BaselearnerCenteredFactory (const std::string&, std::shared_ptr<blearnerfactory::BaselearnerFactory>, 
+    std::shared_ptr<blearnerfactory::BaselearnerFactory>);
+  
+  std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
+  
+  /// Get data used for modeling
+  arma::mat getData() const;
+  
+  /// Get penalty matrix used for modelling
+  arma::mat getPenalty() const;
+  
+  arma::mat instantiateData (const arma::mat&) const;
+};
+
+
 
 // BaselearnerCustomFactory:
 // -----------------------------

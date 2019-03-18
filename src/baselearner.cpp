@@ -438,6 +438,50 @@ arma::mat BaselearnerCombined::predict (std::shared_ptr<data::Data> newdata) con
 // Destructor:
 BaselearnerCombined::~BaselearnerCombined () {}
 
+// BaselearnerCentered:
+// -----------------------
+
+BaselearnerCentered::BaselearnerCentered (std::shared_ptr<data::Data> data, const std::string& identifier)
+{
+  // Called from parent class 'Baselearner':
+  Baselearner::setData(data);
+  Baselearner::setIdentifier(identifier);
+}
+
+// Copy member:
+Baselearner* BaselearnerCentered::clone ()
+{
+  Baselearner* newbl = new BaselearnerCentered(*this);
+  newbl->copyMembers(this->parameter, this->blearner_identifier, this->sh_ptr_data);
+  
+  return newbl;
+}
+
+arma::mat BaselearnerCentered::instantiateData (const arma::mat& newdata) const
+{
+  return newdata;
+}
+
+// Train the learner:
+void BaselearnerCentered::train (const arma::mat& response)
+{
+  // parameter = arma::solve(sh_ptr_data->getData(), response);
+  parameter = sh_ptr_data->XtX_inv * sh_ptr_data->getData().t() * response;
+}
+
+// Predict the learner:
+arma::mat BaselearnerCentered::predict () const
+{
+  return sh_ptr_data->getData() * parameter;
+}
+arma::mat BaselearnerCentered::predict (std::shared_ptr<data::Data> newdata) const
+{
+  return instantiateData(newdata->getData()) * parameter;
+}
+
+// Destructor:
+BaselearnerCentered::~BaselearnerCentered () {}
+
 
 // BaselearnerCustom:
 // -----------------------

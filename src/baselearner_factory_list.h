@@ -48,6 +48,7 @@ public:
   // Functions to register a baselearner factory and print all registered
   // factories:
   void registerBaselearnerFactory (const std::string&, std::shared_ptr<blearnerfactory::BaselearnerFactory>);
+  void removeBaselearnerFactory (const std::string&);
   void printRegisteredFactories () const;
 
   // Get the actual map:

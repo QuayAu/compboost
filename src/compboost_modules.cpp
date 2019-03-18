@@ -699,6 +699,111 @@ public:
 
 
 
+//' Base-learner factory to make Centered regression
+//'
+//' \code{BaselearnerCentered} creates a Centered base-learner factory
+//'  object which can be registered within a base-learner list and then used
+//'  for training.
+//'
+//' @format \code{\link{S4}} object.
+//' @name BaselearnerCentered
+//'
+//' @section Usage:
+//' \preformatted{
+//' BaselearnerCentered$new(data_source, data_target)
+//' BaselearnerCentered$new(data_source, data_target, blearner_type)
+//' }
+//'
+//' @section Arguments:
+//' \describe{
+//' \item{\code{data_source} [\code{Data} Object]}{
+//'   Data object which contains the source data.
+//' }
+//' \item{\code{data_target} [\code{Data} Object]}{
+//'   Data object which gets the transformed source data.
+//' }
+//' \item{\code{degree} [\code{integer(1)}]}{
+//'   This argument is used for transforming the source data. Each element is
+//'   taken to the power of the \code{degree} argument.
+//' }
+//' \item{\code{intercept} [\code{logical(1)}]}{
+//'   Indicating whether an intercept should be added or not. Default is set to TRUE.
+//' }
+//' }
+//'
+//'
+//' @section Details:
+//'   The Centered base-learner factory takes any matrix which the user wants
+//'   to pass the number of columns indicates how much parameter are estimated.
+//'   Note that the intercept isn't added by default. To get an intercept add a
+//'   column of ones to the source data matrix.
+//'
+//'   This class is a wrapper around the pure \code{C++} implementation. To see
+//'   the functionality of the \code{C++} class visit
+//'   \url{https://schalkdaniel.github.io/compboost/cpp_man/html/classblearnerfactory_1_1_Centered_blearner_factory.html}.
+//'
+//' @section Fields:
+//'   This class doesn't contain public fields.
+//'
+//' @section Methods:
+//' \describe{
+//' \item{\code{getData()}}{Get the data matrix of the target data which is used
+//'   for m<odeling.}
+//' \item{\code{transformData(X)}}{Transform a data matrix as defined within the
+//'   factory. The argument has to be a matrix with one column.}
+//' \item{\code{summarizeFactory()}}{Summarize the base-learner factory object.}
+//' }
+//' @examples
+//' # Sample data:
+//' data_mat = cbind(1:10)
+//'
+//' # Create new data object:
+//' data_source = InMemoryData$new(data_mat, "my_data_name")
+//' data_target1 = InMemoryData$new()
+//' data_target2 = InMemoryData$new()
+//'
+//' # Create new linear base-learner factory:
+//' lin_factory = BaselearnerCentered$new(data_source, data_target1,
+//'   list(degree = 2, intercept = FALSE))
+//' lin_factory_int = BaselearnerCentered$new(data_source, data_target2,
+//'   list(degree = 2, intercept = TRUE))
+//'
+//' # Get the transformed data:
+//' lin_factory$getData()
+//' lin_factory_int$getData()
+//'
+//' # Summarize factory:
+//' lin_factory$summarizeFactory()
+//'
+//' # Transform data manually:
+//' lin_factory$transformData(data_mat)
+//' lin_factory_int$transformData(data_mat)
+//'
+//' @export BaselearnerCentered
+class BaselearnerCenteredFactoryWrapper : public BaselearnerFactoryWrapper
+{
+private:
+  
+public:
+  
+  BaselearnerCenteredFactoryWrapper (BaselearnerFactoryWrapper& blearner_target, BaselearnerFactoryWrapper& blearner_center, std::string blc)
+  {
+    // We need to converse the SEXP from the element to an integer:
+    std::string blearner_type_temp = blc;
+    
+    std::shared_ptr<blearnerfactory::BaselearnerFactory> ptr_blearner_target = blearner_target.getFactory();
+    std::shared_ptr<blearnerfactory::BaselearnerFactory> ptr_blearner_center = blearner_center.getFactory();
+      
+    sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerCenteredFactory>(blearner_type_temp, ptr_blearner_target,
+      ptr_blearner_center);
+  }
+  
+  void summarizeFactory ()
+  {
+    Rcpp::Rcout << "\t- Factory creates the following base-learner: " << sh_ptr_blearner_factory->getBaselearnerType() << std::endl;
+  }
+};
+
 
 //' Create custom base-learner factory by using R functions.
 //'
@@ -1026,6 +1131,13 @@ RCPP_MODULE (baselearner_factory_module)
   .method("summarizeFactory", &BaselearnerCombinedFactoryWrapper::summarizeFactory, "Summarize Factory")
   ;
   
+  class_<BaselearnerCenteredFactoryWrapper> ("BaselearnerCentered")
+    .derives<BaselearnerFactoryWrapper> ("Baselearner")
+    .constructor<BaselearnerFactoryWrapper&, BaselearnerFactoryWrapper&, std::string> ()
+  
+  .method("summarizeFactory", &BaselearnerCenteredFactoryWrapper::summarizeFactory, "Summarize Factory")
+  ;
+  
   class_<BaselearnerCustomFactoryWrapper> ("BaselearnerCustom")
     .derives<BaselearnerFactoryWrapper> ("Baselearner")
     .constructor<DataWrapper&, DataWrapper&, Rcpp::List> ()
@@ -1139,6 +1251,10 @@ public:
     std::string factory_id = my_factory_to_register.getFactory()->getBaselearnerType();
     obj.registerBaselearnerFactory(factory_id, my_factory_to_register.getFactory());
   }
+  
+  void removeFactory (std::string factory_id){
+    obj.removeBaselearnerFactory(factory_id);
+  }
 
   void printRegisteredFactories ()
   {
@@ -1189,6 +1305,7 @@ RCPP_MODULE (baselearner_list_module)
     .constructor ()
     .method("registerFactory", &BlearnerFactoryListWrapper::registerFactory, "Register new factory")
     .method("registerFactoryShort", &BlearnerFactoryListWrapper::registerFactoryShort, "Register new factory without addding _")
+    .method("removeFactory", &BlearnerFactoryListWrapper::removeFactory, "Remove a factory by name")
     .method("printRegisteredFactories", &BlearnerFactoryListWrapper::printRegisteredFactories, "Print all registered factories")
     .method("clearRegisteredFactories", &BlearnerFactoryListWrapper::clearRegisteredFactories, "Clear factory map")
     .method("getModelFrame", &BlearnerFactoryListWrapper::getModelFrame, "Get the data used for modeling")

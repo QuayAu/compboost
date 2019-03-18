@@ -490,13 +490,13 @@ BaselearnerCombinedFactory::BaselearnerCombinedFactory (const std::string& blear
   
   // calculate new design matrix and Design Matrix
   arma::mat blc_mat = tensors::rowWiseKronecker(bl1_mat,bl2_mat);
-  arma::mat blc_pen = tensors::penaltySumKronecker(bl1_pen, bl2_pen);
+  arma::mat penalty_mat = tensors::penaltySumKronecker(bl1_pen, bl2_pen);
   
   // put into memory
   data_source = std::make_shared<data::InMemoryData>(data::InMemoryData(blc_mat, "combined"));
   data_target = std::make_shared<data::InMemoryData>(data::InMemoryData(blc_mat, "combined"));
   
-  data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData() + blc_pen);
+  data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData() + penalty_mat);
   
   // blearner_type = blearner_type + " with degree " + std::to_string(degree);
 }
@@ -507,6 +507,11 @@ std::shared_ptr<blearner::Baselearner> BaselearnerCombinedFactory::createBaselea
   sh_ptr_blearner->setBaselearnerType(blearner_type);
   
   return sh_ptr_blearner;
+}
+
+arma::mat BaselearnerCombinedFactory::getPenalty () const
+{
+  return penalty_mat;
 }
 
 arma::mat BaselearnerCombinedFactory::getData () const
@@ -523,7 +528,60 @@ arma::mat BaselearnerCombinedFactory::instantiateData (const arma::mat& newdata)
 {
   return newdata;
 }
+/// ---------------------------------------------------------------------------------------------- ///
 
+BaselearnerCenteredFactory::BaselearnerCenteredFactory (const std::string& blearner_type0, 
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_target, 
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_center)
+{
+  blearner_type = blearner_type0;
+  
+  // Get data from both learners
+  arma::mat bl1_mat = blearner_target->getData();
+  arma::mat bl2_mat = blearner_center->getData();
+  
+  arma::mat bl1_pen = blearner_target->getPenalty();
+  
+  // calculate new design matrix and Design Matrix
+  std::map<std::string, arma::mat>  center_res = tensors::centerDesignMatrix(bl1_mat, bl1_pen, bl2_mat);
+  arma::mat blc_mat = center_res["X"];
+  arma::mat penalty_mat = center_res["P"];
+  
+  // put into memory
+  data_source = std::make_shared<data::InMemoryData>(data::InMemoryData(blc_mat, "Centered"));
+  data_target = std::make_shared<data::InMemoryData>(data::InMemoryData(blc_mat, "Centered"));
+  
+  data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData() + penalty_mat);
+  
+}
+
+std::shared_ptr<blearner::Baselearner> BaselearnerCenteredFactory::createBaselearner (const std::string& identifier)
+{
+  std::shared_ptr<blearner::Baselearner>  sh_ptr_blearner = std::make_shared<blearner::BaselearnerCentered>(data_target, identifier);
+  sh_ptr_blearner->setBaselearnerType(blearner_type);
+  
+  return sh_ptr_blearner;
+}
+
+arma::mat BaselearnerCenteredFactory::getPenalty () const
+{
+  return penalty_mat;
+}
+
+arma::mat BaselearnerCenteredFactory::getData () const
+{
+  // In the case of p = 1 we have to treat the getData() function differently
+  // due to the saved and already transformed data without intercept. This
+  // is annoying but improves performance of the fitting process.
+    return data_target->getData();
+}
+
+// Transform data. This is done twice since it makes the prediction
+// of the whole compboost object so much easier:
+arma::mat BaselearnerCenteredFactory::instantiateData (const arma::mat& newdata) const
+{
+  return newdata;
+}
 
 /// ---------------------------------------------------------------------------------------------- ///
 
