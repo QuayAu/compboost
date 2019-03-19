@@ -531,10 +531,12 @@ arma::mat BaselearnerCombinedFactory::instantiateData (const arma::mat& newdata)
 /// ---------------------------------------------------------------------------------------------- ///
 
 BaselearnerCenteredFactory::BaselearnerCenteredFactory (const std::string& blearner_type0, 
-  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_target, 
-  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_center)
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_target0, 
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_center0)
 {
   blearner_type = blearner_type0;
+  blearner_target = blearner_target0;
+  blearner_center = blearner_center0;
   
   // Get data from both learners
   arma::mat bl1_mat = blearner_target->getData();
@@ -546,6 +548,7 @@ BaselearnerCenteredFactory::BaselearnerCenteredFactory (const std::string& blear
   std::map<std::string, arma::mat>  center_res = tensors::centerDesignMatrix(bl1_mat, bl1_pen, bl2_mat);
   arma::mat blc_mat = center_res["X"];
   arma::mat penalty_mat = center_res["P"];
+  Z = center_res["Z"];
   
   // put into memory
   data_source = std::make_shared<data::InMemoryData>(data::InMemoryData(blc_mat, "Centered"));
@@ -580,7 +583,15 @@ arma::mat BaselearnerCenteredFactory::getData () const
 // of the whole compboost object so much easier:
 arma::mat BaselearnerCenteredFactory::instantiateData (const arma::mat& newdata) const
 {
-  return newdata;
+  
+  // Get new data and instantiate like in factory targer
+  arma::mat bl1_mat = blearner_target->instantiateData(newdata);
+  
+  // now rotate data as before, the actual blearner_center is not needed, just the rotation
+  arma::mat out = bl1_mat * Z;
+  
+
+  return out;
 }
 
 /// ---------------------------------------------------------------------------------------------- ///

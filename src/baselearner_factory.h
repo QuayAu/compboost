@@ -225,6 +225,10 @@ class BaselearnerCenteredFactory : public BaselearnerFactory
 private:
   /// 
   arma::mat penalty_mat;
+  arma::mat Z;
+  
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_target;
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_center;
 public:
   
   BaselearnerCenteredFactory (const std::string&, std::shared_ptr<blearnerfactory::BaselearnerFactory>, 

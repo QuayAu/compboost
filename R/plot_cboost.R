@@ -11,7 +11,7 @@ calculateFeatEffectData = function (cboost_obj, bl_list, blearner_name, iters, f
     stop("Please specify a valid base-learner plus feature.")
   }
   if (! blearner_name %in% cboost_obj$getBaselearnerNames()) {
-    stop("Your requested feature plus learner is not available. Check 'getBaselearnerNames()' for available learners.")
+    stop("Your requested feature plus learner is not available. Check 'getBa/home/keykai/Documents/3_LMU/2_Master/4_thesisselearnerNames()' for available learners.")
   }
   if (length(bl_list[[blearner_name]]$feature) > 1) {
     stop("Only univariate plotting is supported.")
@@ -31,37 +31,49 @@ calculateFeatEffectData = function (cboost_obj, bl_list, blearner_name, iters, f
   checkmate::assertNumeric(from, lower =  min(cboost_obj$data[[feat_name]]), upper = max(cboost_obj$data[[feat_name]]), len = 1, null.ok = TRUE)
   checkmate::assertNumeric(to, lower =  min(cboost_obj$data[[feat_name]]), upper = max(cboost_obj$data[[feat_name]]), len = 1, null.ok = TRUE)
 
-  browser()
   if (is.null(from)) {
     from = min(cboost_obj$data[[feat_name]])
   }
   if (is.null(to)) {
     to = max(cboost_obj$data[[feat_name]])
   }
+  
+  # here we will need to loop through the baselearners
   plot_data = as.matrix(seq(from = from, to = to, length.out = length_out))
   feat_map  = bl_list[[blearner_name]]$factory$transformData(plot_data)
 
-  # Create data.frame for plotting depending if iters is specified:
-  if (! is.null(iters[1])) {
-    preds = lapply(iters, function (x) {
-      if (x >= iter.min) {
-        return(feat_map %*% cboost_obj$model$getParameterAtIteration(x)[[blearner_name]])
+  browser()
+  if(class(self$response) %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
+        coefs_extract = cboost_obj$getEstimatedCoef()
+        df_plot = data.frame(
+          effect  = feat_map %*% coefs_extract[[blearner_name]],
+          feature = plot_data
+        )
+  } else{
+      # Create data.frame for plotting depending if iters is specified:
+      if (! is.null(iters[1])) {
+        preds = lapply(iters, function (x) {
+          if (x >= iter.min) {
+            return(feat_map %*% cboost_obj$model$getParameterAtIteration(x)[[blearner_name]])
+          } else {
+            return(rep(0, length_out))
+          }
+        })
+        names(preds) = iters
+    
+        df_plot = data.frame(
+          effect    = unlist(preds),
+          iteration = as.factor(rep(iters, each = length_out)),
+          feature   = plot_data
+        )
       } else {
-        return(rep(0, length_out))
+        coefs_extract = cboost_obj$getEstimatedCoef()
+        df_plot = data.frame(
+          effect  = feat_map %*% coefs_extract[[blearner_name]],
+          feature = plot_data
+        )
       }
-    })
-    names(preds) = iters
-
-    df_plot = data.frame(
-      effect    = unlist(preds),
-      iteration = as.factor(rep(iters, each = length_out)),
-      feature   = plot_data
-    )
-  } else {
-    df_plot = data.frame(
-      effect  = feat_map %*% cboost_obj$getEstimatedCoef()[[blearner_name]],
-      feature = plot_data
-    )
+        
   }
   return(df_plot)
 }

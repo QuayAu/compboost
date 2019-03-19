@@ -553,7 +553,7 @@ Compboost = R6::R6Class("Compboost",
 
       # Create Factory
       centered_factory = BaselearnerCentered$new(private$bl_list[[bl_target]]$factory, private$bl_list[[bl_center]]$factory, blc)
-      data_target = InMemoryData$new(centered_factory$getData(), "data_target")
+      data_target = InMemoryData$new(centered_factory$getData(), paste(private$bl_list[[bl_target]]$feature) )
      
       # Manually register everything
      
@@ -626,7 +626,11 @@ Compboost = R6::R6Class("Compboost",
       self$bl_factory_list$registerFactoryShort(private$bl_list[[id]]$factory)
       private$bl_list[[id]]$source = NULL
       
-      }, 
+    },
+    removeBaselearner = function(baselerner_id){
+        private$bl_list[[baselerner_id]] = NULL
+        self$bl_factory_list$removeFactory(baselerner_id)
+    },
     train = function(iteration = 100, trace = -1) {
 
       if (self$bl_factory_list$getNumberOfRegisteredFactories() == 0) {
@@ -715,7 +719,10 @@ Compboost = R6::R6Class("Compboost",
     },
     getSelectedBaselearner = function() {
       if(!is.null(self$model))
-        return(self$model$getSelectedBaselearner())
+        temp = self$model$getSelectedBaselearner()
+        temp = gsub("combined_","",temp)
+        temp = gsub("Centered_","",temp)
+        return(temp)
       return(NULL)
     },
     print = function() {
@@ -738,7 +745,11 @@ Compboost = R6::R6Class("Compboost",
     },
     getEstimatedCoef = function () {
       if(!is.null(self$model)) {
-        return(c(self$model$getEstimatedParameter(), offset = self$model$getOffset()))
+        name_rem = self$model$getEstimatedParameter()
+        temp = gsub("combined_","",names(name_rem))
+        temp = gsub("Centered_","",temp)
+        names(name_rem) = temp
+        return(c(name_rem, offset = self$model$getOffset()))
       }
       return(NULL)
     },

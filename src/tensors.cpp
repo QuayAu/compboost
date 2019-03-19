@@ -81,6 +81,7 @@ std::map<std::string, arma::mat>  centerDesignMatrix (const arma::mat& X1, const
   std::map<std::string, arma::mat> out;
   out["X"] = X1_out;
   out["P"] = P1_out;
+  out["Z"] = Z;
   
   return out;
 }
