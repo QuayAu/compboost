@@ -27,9 +27,30 @@ namespace demrei
 // compute the smoothing parameter
 double getLambda (const arma::mat X, const arma::mat W, const arma::mat D, const arma::mat y, int df)
 {
+  
+  // Calculate Everything needed
+  arma::mat W2 = arma::sqrt(W);
+  arma::mat R = arma::chol(X.t() * W2 * W2 * X);
+  R = arma::inv(R);
+  arma::mat L = R.t() * D * R;
+  arma::vec s = arma::svd(L);
 
-  double out;
-  return out;
+  auto lamfun = [](double x, arma::vec s, int df)
+  {
+    double out = 0;
+    for(int i = 0; i<s.n_cols; i++)
+    {
+    out = out + 1/(1+x*s(i));
+    }
+    out = out - df;
+    return out;
+  };
+    
+  // FIXME 
+  // now we only need to find the largest root of lamfun
+  double root = 0;
+  
+  return root;
 }
 
 // compute the degrees of freedom
