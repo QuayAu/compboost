@@ -476,10 +476,13 @@ arma::mat BaselearnerPSplineFactory::instantiateData (const arma::mat& newdata) 
 
 /// ---------------------------------------------------------------------------------------------- ///
 
-BaselearnerCombinedFactory::BaselearnerCombinedFactory (const std::string& blearner_type0, std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_1, 
-  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_2)
+BaselearnerCombinedFactory::BaselearnerCombinedFactory (const std::string& blearner_type0, 
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_1_in, 
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_2_in)
 {
   blearner_type = blearner_type0;
+  blearner_1 = blearner_1_in;
+  blearner_2 = blearner_2_in;
   
   // Get data from both learners
   arma::mat bl1_mat = blearner_1->getData();
@@ -498,7 +501,6 @@ BaselearnerCombinedFactory::BaselearnerCombinedFactory (const std::string& blear
   
   data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData() + penalty_mat);
   
-  // blearner_type = blearner_type + " with degree " + std::to_string(degree);
 }
 
 std::shared_ptr<blearner::Baselearner> BaselearnerCombinedFactory::createBaselearner (const std::string& identifier)
@@ -512,6 +514,15 @@ std::shared_ptr<blearner::Baselearner> BaselearnerCombinedFactory::createBaselea
 arma::mat BaselearnerCombinedFactory::getPenalty () const
 {
   return penalty_mat;
+}
+
+std::map<std::string, std::shared_ptr<blearnerfactory::BaselearnerFactory> > BaselearnerCombinedFactory::getFactories () const
+{
+  std::map<std::string, std::shared_ptr<blearnerfactory::BaselearnerFactory> > out;
+  out["bl1"] = blearner_1;
+  out["bl2"] = blearner_1;
+  
+  return out;
 }
 
 arma::mat BaselearnerCombinedFactory::getData () const
@@ -528,6 +539,7 @@ arma::mat BaselearnerCombinedFactory::instantiateData (const arma::mat& newdata)
 {
   return newdata;
 }
+
 /// ---------------------------------------------------------------------------------------------- ///
 
 BaselearnerCenteredFactory::BaselearnerCenteredFactory (const std::string& blearner_type0, 

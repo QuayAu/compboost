@@ -11,7 +11,7 @@ calculateFeatEffectData = function (cboost_obj, bl_list, blearner_name, iters, f
     stop("Please specify a valid base-learner plus feature.")
   }
   if (! blearner_name %in% cboost_obj$getBaselearnerNames()) {
-    stop("Your requested feature plus learner is not available. Check 'getBa/home/keykai/Documents/3_LMU/2_Master/4_thesisselearnerNames()' for available learners.")
+    stop("Your requested feature plus learner is not available. Check 'getBaselearnerNames()' for available learners.")
   }
   if (length(bl_list[[blearner_name]]$feature) > 1) {
     stop("Only univariate plotting is supported.")
@@ -42,8 +42,7 @@ calculateFeatEffectData = function (cboost_obj, bl_list, blearner_name, iters, f
   plot_data = as.matrix(seq(from = from, to = to, length.out = length_out))
   feat_map  = bl_list[[blearner_name]]$factory$transformData(plot_data)
 
-  browser()
-  if(class(self$response) %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
+  if(class(cboost_obj$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
         coefs_extract = cboost_obj$getEstimatedCoef()
         df_plot = data.frame(
           effect  = feat_map %*% coefs_extract[[blearner_name]],

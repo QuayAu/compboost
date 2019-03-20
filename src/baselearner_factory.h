@@ -203,6 +203,9 @@ class BaselearnerCombinedFactory : public BaselearnerFactory
 private:
   /// 
   arma::mat penalty_mat;
+  
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_1;
+  std::shared_ptr<blearnerfactory::BaselearnerFactory> blearner_2;
 public:
   
   BaselearnerCombinedFactory (const std::string&, std::shared_ptr<blearnerfactory::BaselearnerFactory>, 
@@ -215,8 +218,11 @@ public:
   
   /// Get penalty matrix used for modelling
   arma::mat getPenalty() const;
-  
+
   arma::mat instantiateData (const arma::mat&) const;
+  
+  std::map<std::string, std::shared_ptr<blearnerfactory::BaselearnerFactory> > getFactories () const;
+    
 };
 
 

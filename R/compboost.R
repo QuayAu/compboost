@@ -523,7 +523,9 @@ Compboost = R6::R6Class("Compboost",
       
       if(!keep){
         private$bl_list[[bl1]] = NULL
+        self$bl_factory_list$removeFactory(bl1)
         private$bl_list[[bl2]] = NULL
+        self$bl_factory_list$removeFactory(bl2)
       }
         
     },CenterBaselearner = function(bl_target, bl_center, keep = FALSE){
@@ -718,12 +720,14 @@ Compboost = R6::R6Class("Compboost",
       return(NULL)
     },
     getSelectedBaselearner = function() {
-      if(!is.null(self$model))
+      if(!is.null(self$model)){
         temp = self$model$getSelectedBaselearner()
         temp = gsub("combined_","",temp)
         temp = gsub("Centered_","",temp)
         return(temp)
-      return(NULL)
+      } else{
+        return(NULL)
+      }
     },
     print = function() {
       p = glue::glue("\n
@@ -760,6 +764,11 @@ Compboost = R6::R6Class("Compboost",
         iters = iters, from = from, to = to, length_out = length_out)
 
       return(gg)
+    },
+    getFeatEffectData = function(blearner_name, iters = NULL, from = NULL, to = NULL, length_out = 1000){
+      FeatData = calculateFeatEffectData(cboost_obj = self, bl_list = private$bl_list, blearner_name = blearner_name,
+        iters = iters, from = from, to = to, length_out = length_out)
+      return(FeatData)
     },
     getBaselearnerNames = function () {
       return(names(private$bl_list))
