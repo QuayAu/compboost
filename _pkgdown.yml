@@ -1,5 +1,5 @@
 title: compboost
-url: https://schalkdaniel.github.io/compboost/docs/index.html
+url: https://schalkdaniel.github.io/compboost/
 template:
   params:
     bootswatch: simplex
@@ -26,3 +26,6 @@ navbar:
     href: "reference/index.html"
     contents:
     - '`compboost`'
+  right:
+  - icon: fa-github fa-lg
+    href: https://github.com/schalkdaniel/compboost

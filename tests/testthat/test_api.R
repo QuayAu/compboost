@@ -147,7 +147,7 @@ test_that("multiple logger works", {
   )
   expect_silent(
     cboost$addLogger(logger = LoggerOobRisk, use_as_stopper = TRUE, logger_id = "oob",
-      LossQuadratic$new(), 0.01, cboost$prepareData(mtcars), ResponseRegr$new("oob_response", as.matrix(mtcars[["mpg"]])))
+      LossQuadratic$new(), 0.01, 5, cboost$prepareData(mtcars), ResponseRegr$new("oob_response", as.matrix(mtcars[["mpg"]])))
   )
   expect_silent(
     cboost$addLogger(logger = LoggerInbagRisk, use_as_stopper = TRUE, logger_id = "inbag",
@@ -160,6 +160,10 @@ test_that("multiple logger works", {
   expect_equal(cboost$model$getLoggerData()$logger_data[, 2], cboost$model$getLoggerData()$logger_data[, 3])
   expect_length(cboost$model$getLoggerData()$logger_names, 4)
 
+  # Test retraining for time:
+  n_retrain = 400L
+  expect_output(cboost$train(n_retrain))
+  expect_equal(order(cboost$getLoggerData()$time), seq_len(n_retrain))
 })
 
 test_that("custom base-learner works through api", {
