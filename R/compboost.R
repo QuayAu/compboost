@@ -829,15 +829,17 @@ Compboost = R6::R6Class("Compboost",
           iter = c(seq_along(inbag_trace), seq_along(oob_trace))
         )
 
-        gg = ggplot2::ggplot(df_risk, ggplot2::aes(x = iter, y = risk, color = type)) +
-          ggplot2::geom_line(size = 1.1) +
-          ggplot2::xlab("Iteration") +
-          ggplot2::ylab("Risk")# + labs(color = "")
-
-        return(gg)
+        gg = ggplot2::ggplot(df_risk, ggplot2::aes(x = iter, y = risk, color = type))
       } else {
-        stop("Model was not trained with an out of bag risk logger called 'oob_risk'.")
+        warning("Model was not trained with an out of bag risk logger called 'oob_risk'.")
+        df_risk = data.frame(iter = seq_along(inbag_trace), risk = inbag_trace)
+        gg = ggplot2::ggplot(df_risk, ggplot2::aes(x = iter, y = risk))
       }
+      gg = gg + ggplot2::geom_line(size = 1.1) +
+        ggplot2::xlab("Iteration") +
+        ggplot2::ylab("Risk")
+
+      return(gg)
     }
   ),
   private = list(
@@ -859,7 +861,7 @@ Compboost = R6::R6Class("Compboost",
 
       if (! is.null(self$oob_fraction)) {
         self$addLogger(logger = LoggerOobRisk, logger_id = "oob_risk",
-          used.loss = self$loss, eps.for.break = 0, oob_data = self$prepareData(self$data_oob),
+          used.loss = self$loss, eps.for.break = 0, patience = 0, oob_data = self$prepareData(self$data_oob),
           oob.response = self$response_oob)
       }
     },

@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-<img align="right" src="man/figures/cboost_hexagon.png" width="100px">
+# compboost: Fast and Flexible Component-Wise Boosting Framework <a href='https://danielschalk.com/compboost/'><img src='man/figures/logo.png' align="right" height="139" /></a>
 
 [![Build
 Status](https://travis-ci.org/schalkdaniel/compboost.svg?branch=master)](https://travis-ci.org/schalkdaniel/compboost)
@@ -13,10 +13,10 @@ Status](https://coveralls.io/repos/github/schalkdaniel/compboost/badge.svg?branc
 [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/compboost)](https://cran.r-project.org/package=compboost)
 [![status](http://joss.theoj.org/papers/94cfdbbfdfc8796c5bdb1a74ee59fcda/status.svg)](http://joss.theoj.org/papers/94cfdbbfdfc8796c5bdb1a74ee59fcda)
 
-[Documentation](https://compboost.org) | [Contributors](CONTRIBUTORS.md)
+[Documentation](https://danielschalk.com/compboost/) | [Contributors](CONTRIBUTORS.md)
 | [Release Notes](NEWS.md)
 
-## compboost: Fast and Flexible Component-Wise Boosting Framework
+## Overview
 
 Component-wise boosting applies the boosting framework to statistical
 models, e.g., general additive models using component-wise smoothing
@@ -61,7 +61,8 @@ cboost = boostSplines(data = iris, target = "Sepal.Length", loss = LossQuadratic
 ```
 
 For more extensive examples and how to use the `R6` interface visit the
-project page.
+[project
+page](https://danielschalk.com/compboost/articles/getting_started/use_case.html).
 
 <!--
 

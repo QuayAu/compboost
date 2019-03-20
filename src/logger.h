@@ -85,7 +85,7 @@ public:
     std::shared_ptr<blearner::Baselearner>, const double&, const double&) = 0;
 
   /// Class dependent check if the stopping criteria is fulfilled
-  virtual bool reachedStopCriteria () const = 0;
+  virtual bool reachedStopCriteria () = 0;
 
   /// Return the data stored within the logger
   virtual arma::vec getLoggedData () const = 0;
@@ -148,7 +148,7 @@ public:
     std::shared_ptr<blearner::Baselearner>, const double&, const double&);
 
   /// Stop criteria is fulfilled if the current iteration exceed `max_iteration`
-  bool reachedStopCriteria () const;
+  bool reachedStopCriteria ();
 
   /// Return the data stored within the iteration logger
   arma::vec getLoggedData () const;
@@ -202,7 +202,7 @@ public:
     std::shared_ptr<blearner::Baselearner>, const double&, const double&);
 
   /// Stop criteria is fulfilled if the relative improvement falls below `eps_for_break`
-  bool reachedStopCriteria () const;
+  bool reachedStopCriteria ();
 
   /// Return the data stored within the logger
   arma::vec getLoggedData () const;
@@ -242,6 +242,8 @@ private:
 
   /// Stopping criteria, stop if \f$(\mathrm{risk}_{i-1} - \mathrm{risk}_i) / \mathrm{risk}_{i-1} < \mathrm{eps\_for\_break}\f$
   double eps_for_break;
+  unsigned int patience = 5;
+  unsigned int count_patience = 0;
 
   /// OOB prediction which is internally done in every iteration
   arma::mat oob_prediction;
@@ -261,7 +263,7 @@ private:
 public:
 
   /// Default constructor
-  LoggerOobRisk (const std::string&, const bool&, std::shared_ptr<loss::Loss>, const double&,
+  LoggerOobRisk (const std::string&, const bool&, std::shared_ptr<loss::Loss>, const double&, const unsigned int&,
     std::map<std::string, std::shared_ptr<data::Data>>, std::shared_ptr<response::Response>);
 
   /// Log current step of compboost iteration for class `LoggerOobRisk`
@@ -269,7 +271,7 @@ public:
     std::shared_ptr<blearner::Baselearner>, const double&, const double&);
 
   /// Stop criteria is fulfilled if the relative improvement falls below `eps_for_break`
-  bool reachedStopCriteria () const;
+  bool reachedStopCriteria ();
 
   /// Return the data stored within the logger
   arma::vec getLoggedData () const;
@@ -315,6 +317,9 @@ private:
   /// The unit for time measuring, allowed are `minutes`, `seconds` and `microseconds`
   std::string time_unit;
 
+  /// Drift that is added to runtime to be able to proper stop time for retraining
+  unsigned int retrain_drift = 0;
+
 
 public:
 
@@ -326,7 +331,7 @@ public:
     std::shared_ptr<blearner::Baselearner>, const double&, const double&);
 
   /// Stop criteria is fulfilled if the passed time exceeds `max_time`
-  bool reachedStopCriteria () const;
+  bool reachedStopCriteria ();
 
   /// Return the data stored within the logger
   arma::vec getLoggedData () const;
@@ -336,6 +341,8 @@ public:
 
   /// Print status of current iteration into the console
   std::string printLoggerStatus () const;
+
+  void reInitializeTime();
 
 };
 
