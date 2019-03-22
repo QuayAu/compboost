@@ -362,8 +362,8 @@ void ResponseFDA::initializePrediction ()
 void ResponseFDA::updatePseudoResiduals (std::shared_ptr<loss::Loss> sh_ptr_loss)
 {
   checkLossCompatibility(sh_ptr_loss);
-  weights = weights.each_row() % trapez_weights.t();
-  pseudo_residuals = sh_ptr_loss->calculateWeightedPseudoResiduals(response, prediction_scores, weights);
+  arma::mat weights2 = weights.each_row() % trapez_weights.t();
+  pseudo_residuals = sh_ptr_loss->calculateWeightedPseudoResiduals(response, prediction_scores, weights2);
 }
 
 
@@ -510,8 +510,8 @@ void ResponseFDALong::initializePrediction ()
 void ResponseFDALong::updatePseudoResiduals (std::shared_ptr<loss::Loss> sh_ptr_loss)
 {
   checkLossCompatibility(sh_ptr_loss);
-  weights = weights % trapez_weights;
-  pseudo_residuals = sh_ptr_loss->calculateWeightedPseudoResiduals(response, prediction_scores, weights);
+  arma::mat weights2 = weights % trapez_weights;
+  pseudo_residuals = sh_ptr_loss->calculateWeightedPseudoResiduals(response, prediction_scores, weights2);
 }
 
 

@@ -152,7 +152,6 @@ void BaselearnerPolynomial::train (const arma::mat& response)
     if (intercept) {
       y_mean = arma::as_scalar(arma::accu(response) / response.size());
     }
-
     double slope = arma::as_scalar(arma::sum((sh_ptr_data->getData() - sh_ptr_data->XtX_inv(0,0)) % (response - y_mean)) / arma::as_scalar(sh_ptr_data->XtX_inv(0,1)));
     double intercept = y_mean - slope * sh_ptr_data->XtX_inv(0,0);
 
@@ -275,7 +274,6 @@ Baselearner* BaselearnerPSpline::clone ()
  */
 arma::mat BaselearnerPSpline::instantiateData (const arma::mat& newdata) const
 {
-
   arma::vec knots = sh_ptr_data->knots;
 
   // check if the new data matrix contains value which are out of range:

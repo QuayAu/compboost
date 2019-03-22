@@ -49,6 +49,7 @@
 #include "baselearner.h"
 #include "data.h"
 #include "splines.h"
+#include "tensors.h"
 
 namespace blearnerfactory {
 
@@ -114,6 +115,9 @@ public:
 
   /// Get data used for modeling
   arma::mat getData() const;
+  
+  /// Get penalty matrix used for modelling
+  arma::mat getPenalty() const;
 
   arma::mat instantiateData (const arma::mat&) const;
 };

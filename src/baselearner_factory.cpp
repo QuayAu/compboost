@@ -19,7 +19,6 @@
 // =========================================================================== #
 
 #include "baselearner_factory.h"
-#include "tensors.h"
 #include "data.h"
 
 namespace blearnerfactory {
@@ -124,10 +123,43 @@ BaselearnerPolynomialFactory::BaselearnerPolynomialFactory (const std::string bl
   // Make sure that the data identifier is setted correctly:
   data_target->setDataIdentifier(data_source->getDataIdentifier());
   
+  // Get the data of the source, transform it and write it into the target
+  arma::mat temp = arma::pow(data_source->getData(), degree);
+  if (intercept) {
+    arma::mat temp_intercept(temp.n_rows, 1, arma::fill::ones);
+    temp = join_rows(temp_intercept, temp);
+  }
+  
+   if(grid_mat.n_elem == 1) {
+    arma::mat data_kroned = arma::zeros(temp.n_rows,temp.n_cols*grid_mat(0).n_cols);
+    
+    int grid_n = grid_mat(0).n_rows;
+    
+    for(int i = 0; i <= temp.n_rows - grid_n; i = i + grid_n) {
+      data_kroned.rows(i,(i-1 + grid_n)) = tensors::rowWiseKronecker(grid_mat(0),temp.rows(i,(i-1 + grid_n)));
+    }
+    temp = data_kroned;
 
-  // Get the data of the source, transform it and write it into the target:
-  data_target->setData(instantiateData(data_source->getData()));
-  data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData());
+  }
+
+  // Case two: different grids, sepearte t-splines
+  if(grid_mat.n_elem > 1) {
+    arma::mat data_kroned = arma::mat();
+    
+    int row_tracker = 0;
+    for(int g; g < grid_mat.n_elem; g++){
+        int grid_n = grid_mat(g).n_rows;
+        arma::mat g_kroned = tensors::rowWiseKronecker(grid_mat(g), temp.rows(row_tracker,(row_tracker-1 + grid_n)));
+        data_kroned = arma::join_cols(data_kroned, g_kroned);
+        row_tracker = row_tracker + grid_n;
+    }
+    temp = data_kroned;
+  }
+  
+  data_target->setData(temp);
+  
+  
+  data_target->XtX_inv = arma::inv(temp.t() * temp);
   
   // blearner_type = blearner_type + " with degree " + std::to_string(degree);
 }
@@ -226,6 +258,17 @@ arma::mat BaselearnerPolynomialFactory::instantiateData (const arma::mat& newdat
   return temp;
 }
 
+arma::mat BaselearnerPolynomialFactory::getPenalty () const
+{
+  if(intercept){
+    arma::mat penalty_mat = arma::mat(2,2,arma::fill::zeros);
+    return penalty_mat;
+  } else {
+    arma::mat penalty_mat = arma::mat(1,1,arma::fill::zeros);
+      return penalty_mat;
+  }
+}
+
 // BaselearnerPSpline:
 // -----------------------
 
@@ -276,6 +319,7 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
   } catch (...) {
     ::Rf_error( "c++ exception (unknown reason)" );
   }
+  
   // Initialize knots:
   data_target->knots = splines::createKnots(data_source->getData(), n_knots, degree);
 
@@ -329,9 +373,6 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
   // Initialize knots:
   data_target->knots = splines::createKnots(data_source->getData(), n_knots, degree);
 
-  // Additionally set the penalty matrix:
-  penalty_mat = penalty * splines::penaltyMat(n_knots + (degree + 1), differences);
-
   // Make sure that the data identifier is setted correctly:
   data_target->setDataIdentifier(data_source->getDataIdentifier());
 
@@ -340,13 +381,102 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
   //     the data object. This also requires to adopt getData() for that purpose.
   //   - To get some (very) nice speed ups we store the transposed matrix not the standard one. This also
   //     affects how the training in baselearner.cpp is done. Nevertheless, this speed up things dramatically.
-  if (use_sparse_matrices) {
-    data_target->sparse_data_mat = splines::createSparseSplineBasis (data_source->getData(), degree, data_target->knots).t();
-    data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty_mat);
-  } else {
-    data_target->setData(instantiateData(data_source->getData()));
-    data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData() + penalty_mat);
+
+  
+    // Initialize knots:
+  data_target->knots = splines::createKnots(data_source->getData(), n_knots, degree);
+
+  // Make sure that the data identifier is setted correctly:
+  data_target->setDataIdentifier(data_source->getDataIdentifier());
+  
+  // sparsify grid
+  arma::field<arma::sp_mat> grid_mat_sparse = arma::field<arma::sp_mat>(grid_mat.size());
+   
+  for(int i=0; i<grid_mat.size(); i++){
+    grid_mat_sparse(i) = arma::sp_mat(grid_mat(i));
   }
+  
+  // Get the data of the source, transform it and write it into the target. This needs some explanations:
+  //   - If we use sparse matrices we want to store the sparse matrix into the sparse data matrix member of
+  //     the data object. This also requires to adopt getData() for that purpose.
+  //   - To get some (very) nice speed ups we store the transposed matrix not the standard one. This also
+  //     affects how the training in baselearner.cpp is done. Nevertheless, this speed up things dramatically.
+  
+  // We will transpose only after we kroneckered the time to the basis
+  data_target->sparse_data_mat = splines::createSparseSplineBasis (data_source->getData(), degree, data_target->knots);
+    
+  if(grid_mat_sparse.n_elem == 1) {
+    arma::sp_mat data_kroned = arma::sp_mat(data_target->sparse_data_mat.n_rows, data_target->sparse_data_mat.n_cols*grid_mat_sparse(0).n_cols);
+    arma::sp_mat temp = arma::sp_mat();
+    int grid_n = grid_mat_sparse(0).n_rows;
+    
+    // Vars
+    arma::rowvec vecA = arma::rowvec();
+    arma::rowvec vecB = arma::rowvec();
+    arma::sp_mat vecAsparse = arma::sp_mat();
+    arma::sp_mat vecBsparse = arma::sp_mat();
+    arma::sp_mat out = arma::sp_mat();
+    
+    for(int i = 0; i <= data_target->sparse_data_mat.n_rows - grid_n; i = i + grid_n) {
+        temp = data_target->sparse_data_mat.rows(i,(i-1 + grid_n));
+      
+        // Variables
+        vecA = arma::rowvec(temp.n_cols, arma::fill::ones);
+        vecB = arma::rowvec(grid_mat_sparse(0).n_cols, arma::fill::ones);
+        
+        arma::sp_mat vecAsparse = arma::sp_mat(vecA);
+        arma::sp_mat vecBsparse = arma::sp_mat(vecB);
+        // Multiply both kronecker products element-wise
+        out = arma::kron(temp,vecBsparse) % arma::kron(vecAsparse, (grid_mat_sparse(0)));
+        data_kroned.rows(i,(i-1 + grid_n)) = out;
+    }
+    // store transposed
+    data_target->sparse_data_mat = data_kroned.t();
+
+  }
+  
+  // Case two: different grids, sepearte t-splines
+  if(grid_mat_sparse.n_elem > 1) {
+    arma::sp_mat data_kroned = arma::sp_mat();
+    arma::sp_mat g_kroned = arma::sp_mat();
+    arma::sp_mat temp = arma::sp_mat();
+    
+    
+    // Vars
+    arma::rowvec vecA = arma::rowvec();
+    arma::rowvec vecB = arma::rowvec();
+    arma::sp_mat vecAsparse = arma::sp_mat();
+    arma::sp_mat vecBsparse = arma::sp_mat();
+    arma::sp_mat out = arma::sp_mat();
+    
+    int row_tracker = 0;
+    for(int g; g < grid_mat_sparse.n_elem; g++){
+        int grid_n = grid_mat_sparse(g).n_rows;
+        temp = data_target->sparse_data_mat.rows(row_tracker,(row_tracker-1 + grid_n));
+        
+        // Variables
+        vecA = arma::rowvec(temp.n_cols, arma::fill::ones);
+        vecB = arma::rowvec(grid_mat_sparse(0).n_cols, arma::fill::ones);
+        
+        arma::sp_mat vecAsparse = arma::sp_mat(vecA);
+        arma::sp_mat vecBsparse = arma::sp_mat(vecB);
+      
+        // Multiply both kronecker products element-wise
+        out = arma::kron(temp,vecBsparse) % arma::kron(vecAsparse, (grid_mat_sparse(0)));
+        
+        
+        data_kroned = arma::join_cols(data_kroned, out);
+        row_tracker = row_tracker + grid_n;
+    }
+    data_target->sparse_data_mat = data_kroned.t();
+  }
+  
+  // Set penalty matrix to new format
+  // cols are now rows!!
+  penalty_mat = penalty * splines::penaltyMat(data_target->sparse_data_mat.n_rows, differences);
+  
+  data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty_mat);
+  
 }
 
 
@@ -424,6 +554,7 @@ arma::mat BaselearnerPSplineFactory::getPenalty () const
  */
 arma::mat BaselearnerPSplineFactory::instantiateData (const arma::mat& newdata) const
 {
+  
   arma::vec knots = data_target->knots;
 
   // check if the new data matrix contains value which are out of range:
@@ -435,41 +566,6 @@ arma::mat BaselearnerPSplineFactory::instantiateData (const arma::mat& newdata) 
   // Data object has to be created prior! That means that data_ptr must have
   // initialized knots, and penalty matrix!
   arma::mat out = splines::createSplineBasis (temp, degree, data_target->knots);
-  
-  
-  // grid_mat is a field of pointers to inMemoryData matrices
-  // grid_mat(0)->getData().n_cols 
-  // take first element of field (a pointer)
-  // dereference pointer, get an inMemoryData obj
-  // getData(), receive a matrix
-  // Case one: same grid, all on the same t-spline
-  if(grid_mat.n_elem == 1) {
-    arma::mat data_kroned = arma::zeros(out.n_rows,out.n_cols*grid_mat(0).n_cols);
-    
-    int grid_n = grid_mat(0).n_rows;
-    
-    for(int i = 0; i <= out.n_rows - grid_n; i = i + grid_n) {
-      data_kroned.rows(i,(i-1 + grid_n)) = tensors::rowWiseKronecker(grid_mat(0),out.rows(i,(i-1 + grid_n)));
-    }
-    out = data_kroned;
-
-  }
-
-  // Case two: different grids, sepearte t-splines
-  if(grid_mat.n_elem > 1) {
-    arma::mat data_kroned = arma::mat();
-    
-    int row_tracker = 0;
-    for(int g; g < grid_mat.n_elem; g++){
-        int grid_n = grid_mat(g).n_rows;
-        arma::mat g_kroned = tensors::rowWiseKronecker(grid_mat(g), out.rows(row_tracker,(row_tracker-1 + grid_n)));
-        data_kroned = arma::join_cols(data_kroned, g_kroned);
-        row_tracker = row_tracker + grid_n;
-    }
-    temp = data_kroned;
-  }
-  
-  temp = out;
   
   return out;
 }

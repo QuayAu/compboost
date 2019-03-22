@@ -22,8 +22,16 @@
 
 namespace tensors
 {
-
-
+/**
+ * \brief Calculate the rowwise kronecker product of two matrices
+ *
+ * This function calculates the rowwise kronecker product of matrices.
+ * Sparse matrices are allowed as inputs
+ *
+ * \param A `arma::mat` or `arma::sp_mat` a matrix.
+ * \param B `arma::mat` or `arma::sp_mat` a matrix.
+ * \returns `arma::mat` or `arma::sp_mat`.
+ */
 arma::mat rowWiseKronecker (const arma::mat& A, const arma::mat& B)
 {
   // Variables
@@ -37,6 +45,42 @@ arma::mat rowWiseKronecker (const arma::mat& A, const arma::mat& B)
   return out;
 }
 
+/**
+ * \brief Calculate the rowwise kronecker product of two matrices
+ *
+ * This function calculates the rowwise kronecker product of matrices.
+ * Sparse matrices are allowed as inputs
+ *
+ * \param A `arma::mat` or `arma::sp_mat` a matrix.
+ * \param B `arma::mat` or `arma::sp_mat` a matrix.
+ * \returns `arma::mat` or `arma::sp_mat`.
+ */
+arma::sp_mat rowWiseKroneckerSparse (const arma::sp_mat A, const arma::sp_mat B)
+{
+  // Variables
+  arma::rowvec vecA = arma::rowvec(A.n_cols, arma::fill::ones);
+  arma::rowvec vecB = arma::rowvec(B.n_cols, arma::fill::ones);
+  
+  arma::sp_mat vecAsparse = arma::sp_mat(vecA);
+  arma::sp_mat vecBsparse = arma::sp_mat(vecB);
+
+  // Multiply both kronecker products element-wise
+  arma::sp_mat out = arma::kron(A,vecBsparse) % arma::kron(vecAsparse, B);
+
+  return out;
+}
+
+/**
+ * \brief Calculate the penalty matrix of a combined baselearner
+ *
+ * This function takes two penalty matrices of two baselearners
+ * and calculates the correct kroneckered sum for a new baselearner
+ * combining the two inputs.
+ *
+ * \param A `arma::mat` or `arma::sp_mat` a penalty matrix.
+ * \param B `arma::mat` or `arma::sp_mat` a penalty matrix.
+ * \returns `arma::mat` or `arma::sp_mat`.
+ */
 arma::mat penaltySumKronecker (const arma::mat& Pa, const arma::mat& Pb)
 {
   // Variables
@@ -85,7 +129,6 @@ std::map<std::string, arma::mat>  centerDesignMatrix (const arma::mat& X1, const
   
   return out;
 }
-
 
 arma::mat trapezWeights (const arma::mat& time_points)
 {
