@@ -73,7 +73,7 @@ double findLambdaWithToms748 (const arma::vec& singular_values, const double& de
 //' demmlerReinsch(XtX, pen, 2)
 //' @export
 // [[Rcpp::export]]
-double demmlerReinsch (const arma::mat& XtX, const arma::mat& penalty_mat, const double& degrees_of_freedom)
+
 {
   const double eps = 1e-9;
   // const int XtX_rank = arma::rank(XtX);
