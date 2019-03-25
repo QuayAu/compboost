@@ -62,6 +62,8 @@ class Loss
 public:
   /// Get the task id
   std::string getTaskId () const;
+  std::string getLossType () const;
+  std::string loss_type;
 
   /// Specific loss function
   virtual arma::mat definedLoss (const arma::mat&, const arma::mat&) const = 0;

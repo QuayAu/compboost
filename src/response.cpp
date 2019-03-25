@@ -320,6 +320,8 @@ ResponseFDA::ResponseFDA (std::vector<std::string>& target_name0, const arma::ma
   // FDA specifics
   grid = grid0;
   trapez_weights = tensors::trapezWeights(grid0);
+  mean_offset = arma::mean(response, 0); // calculate offsets
+  median_offset = arma::median(response,0); // calculate offsets 
   // FIXME inefficient because feature are copied length(grid0)-times
   response = response.t();
   response.reshape(response.n_cols*response.n_rows,1);
@@ -345,6 +347,23 @@ arma::mat ResponseFDA::calculateInitialPrediction (const arma::mat& response) co
   return init;
 }
 
+void ResponseFDA::constantInitialization (std::shared_ptr<loss::Loss> sh_ptr_loss)
+{
+  checkLossCompatibility(sh_ptr_loss);
+
+  if (! is_initialization_initialized) {
+    if (use_weights) {
+      initialization = sh_ptr_loss->weightedConstantInitializer(response, weights);
+    } else {
+      // Functional offset needs to pointwise calculate the offset
+      initialization = sh_ptr_loss->constantInitializer(response);
+    }
+    is_initialization_initialized = true;
+  } else {
+    Rcpp::stop("Constant initialization is already initialized.");
+  }
+}
+
 void ResponseFDA::initializePrediction ()
 {
   if (is_initialization_initialized) {
@@ -362,7 +381,7 @@ void ResponseFDA::initializePrediction ()
 void ResponseFDA::updatePseudoResiduals (std::shared_ptr<loss::Loss> sh_ptr_loss)
 {
   checkLossCompatibility(sh_ptr_loss);
-  arma::mat weights2 = weights.each_row() % trapez_weights.t();
+  arma::mat weights2 = weights % trapez_weights;
   pseudo_residuals = sh_ptr_loss->calculateWeightedPseudoResiduals(response, prediction_scores, weights2);
 }
 

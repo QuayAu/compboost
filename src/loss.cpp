@@ -31,6 +31,11 @@ std::string Loss::getTaskId () const
   return task_id;
 }
 
+std::string Loss::getLossType () const
+{
+  return loss_type;
+}
+
 arma::mat Loss::weightedLoss (const arma::mat& true_value, const arma::mat& prediction, const arma::mat& weights) const
 {
   return weights % definedLoss(true_value, prediction);
@@ -76,6 +81,7 @@ Loss::~Loss () {
 LossQuadratic::LossQuadratic ()
 {
   task_id = "regression";
+  loss_type = "quadratic";
 }
 
 /**
@@ -88,6 +94,7 @@ LossQuadratic::LossQuadratic ()
 LossQuadratic::LossQuadratic (const double& custom_offset0)
 {
   task_id = "regression";
+  loss_type = "quadratic";
   custom_offset = custom_offset0;
   use_custom_offset = true;
 }
@@ -156,6 +163,7 @@ arma::mat LossQuadratic::weightedConstantInitializer (const arma::mat& true_valu
 LossAbsolute::LossAbsolute ()
 {
   task_id = "regression"; // set parent
+  loss_type = "absolute";
 }
 
 /**
@@ -168,6 +176,7 @@ LossAbsolute::LossAbsolute ()
 LossAbsolute::LossAbsolute (const double& custom_offset0)
 {
   task_id = "regression"; // set parent
+  loss_type = "absolute";
   custom_offset = custom_offset0;
   use_custom_offset = true;
 }
@@ -232,6 +241,7 @@ arma::mat LossAbsolute::weightedConstantInitializer (const arma::mat& true_value
 LossBinomial::LossBinomial ()
 {
   task_id = "binary_classif"; // set parent
+  loss_type = "binary";
 }
 
 /**
@@ -251,6 +261,7 @@ LossBinomial::LossBinomial (const double& custom_offset0)
   } else {
 
     custom_offset = custom_offset0;
+    loss_type = "binary";
     use_custom_offset = true;
 
   }
@@ -325,6 +336,7 @@ LossCustom::LossCustom (Rcpp::Function lossFun, Rcpp::Function gradientFun, Rcpp
     initFun( initFun )
 {
   task_id = "custom";
+  loss_type = "custom";
   // Rcpp::Rcout << "Be careful! You are using a custom loss out of R!"
   //           << "This will slow down everything!"
   //           << std::endl;
@@ -401,6 +413,7 @@ arma::mat LossCustom::weightedConstantInitializer (const arma::mat& true_value, 
 LossCustomCpp::LossCustomCpp (SEXP lossFun0, SEXP gradFun0, SEXP constInitFun0)
 {
   task_id = "custom"; // set parent
+  loss_type = "custom";
   // Set functions:
   Rcpp::XPtr<lossFunPtr> myTempLoss (lossFun0);
   lossFun = *myTempLoss;

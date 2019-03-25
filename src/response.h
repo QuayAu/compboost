@@ -130,6 +130,8 @@ class ResponseFDA : public Response
 public:
   arma::mat grid;
   arma::mat trapez_weights;
+  arma::mat mean_offset;
+  arma::mat median_offset;
   
   ResponseFDA (std::vector<std::string>&, const arma::mat&, const arma::mat&);
   ResponseFDA (std::vector<std::string>&, const arma::mat&, const arma::mat&, const arma::mat&);
@@ -138,6 +140,7 @@ public:
   void initializePrediction ();
   void updatePseudoResiduals (std::shared_ptr<loss::Loss>);
   arma::mat getPredictionTransform (const arma::mat&) const;
+  void constantInitialization (std::shared_ptr<loss::Loss>);
   arma::mat getPredictionResponse (const arma::mat&) const;
   arma::mat getGrid (const arma::mat&) const;
 

@@ -21,11 +21,15 @@
 #define DEMMLER_H_
 
 #include "RcppArmadillo.h"
-#include "RcppArmadillo.h"
+#include <boost/math/tools/toms748_solve.hpp>
+#include <functional> // functional
 
 namespace demrei
 {
 double getLambda (const arma::mat, const arma::mat, const arma::mat, const arma::mat, int);
+double calculateDegreesOfFreedom (const double&, const arma::vec&, const double&);
+double findLambdaWithToms748 (const arma::vec&, const double&, const double&, const double&);
+double demmlerReinsch (const arma::mat&, const arma::mat&, const double&);
 double getDF (const arma::mat, const arma::mat, const arma::mat, const arma::mat, double);
 } // namespace tensors
 

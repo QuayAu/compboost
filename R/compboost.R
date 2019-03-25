@@ -333,7 +333,8 @@ Compboost = R6::R6Class("Compboost",
     positive_category = NULL,
     grid_mat = NULL,
     stop_if_all_stoppers_fulfilled = FALSE,
-    initialize = function(data, target, optimizer = OptimizerCoordinateDescent$new(), loss, learning_rate = 0.05, oob_fraction = NULL) {
+    initialize = function(data, target, optimizer = OptimizerCoordinateDescent$new(), loss, learning_rate = 0.05, oob_fraction = NULL, 
+      time_spline_pars = list(degree = 3, n_knots = 25)) {
       checkmate::assertDataFrame(data, any.missing = FALSE, min.rows = 1)
       checkmate::assertNumeric(learning_rate, lower = 0, upper = 1, any.missing = FALSE, len = 1)
       checkmate::assertNumeric(oob_fraction, lower = 0, upper = 1, any.missing = FALSE, len = 1, null.ok = TRUE)
@@ -402,24 +403,32 @@ Compboost = R6::R6Class("Compboost",
       # add a bols(t) learner for FDA case
       if(class(self$response)[1] == "Rcpp_ResponseFDA"){
         
+        # We use the P-Spline factory to build a design matrix out of our time data
+        # We will never actually fit or use this learner by itself, therefore we will not register the
+        # factory anywhere. We will safe the time grids in transformed base spline form
+        # and pass these to all baselearner factories
+        # we will safe the factory for transforming data.
         blt_source = InMemoryData$new(as.matrix(self$response$getGrid()[1,]), "")
         blt_target = InMemoryData$new()
+        private$time_spline = BaselearnerPSpline$new(blt_source, blt_target, time_spline_pars)
         
-        time_spline = BaselearnerPSpline$new(blt_source, blt_target, list(degree = 3, n_knots = 25, differences = 2))
-        
-        self$grid_mat = list(time_spline$getData())
+        self$grid_mat = list(private$time_spline$getData())
       }
       
       if(class(self$response)[1] == "Rcpp_ResponseFDALong"){
         
+        # Get all the differing grids from the response
         grids = self$response$getGrid_field()
         grid_mats = list()
+        browser()
+        # Now build a single spline (!) from all datapoints
+        # we are effectively concatenating and sorting all grids to use all data
+        blt_source = InMemoryData$new(matrix(as.vector(unlist(grids)), ncol = 1), "")
+        blt_target = InMemoryData$new()
+        private$time_spline = BaselearnerPSpline$new(g_source, g_target, time_spline_pars)
         
         for(g in 1:length(grids)){
-          g_source = InMemoryData$new(matrix(grids[[g]], ncol = 1), "")
-          g_target = InMemoryData$new()
-          g_spline = BaselearnerPSpline$new(g_source, g_target, list(degree = 3, n_knots = 25, differences = 2))
-          grid_mats[[g]] = g_spline$getData()
+          grid_mats[[g]] = private$time_spline$transformData(matrix(grids[[g]], ncol = 1))
         }
         self$grid_mat = grid_mats
       }
@@ -850,6 +859,7 @@ Compboost = R6::R6Class("Compboost",
     logger_list = list(),
     oob_idx = NULL,
     train_idx = NULL,
+    time_spline = NULL,
     initializeModel = function() {
 
       private$logger_list = LoggerList$new()
