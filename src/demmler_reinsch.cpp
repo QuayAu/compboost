@@ -45,45 +45,10 @@ double findLambdaWithToms748 (const arma::vec& singular_values, const double& de
   return (r.first + r.second) / 2;
 }
 
-/* NOTES:
- * - Multiplying penalty matrix with epsilon?
- * - Root is always calculated for df2?
- * - Armadillo svd uses a divide-and-conquer algorithm with approximations which is much faster than the standard one.
- */
-
-//' Transform degrees of freedom to lambda
-//'
-//' This function calculates the Demmler-Reinsch-Orthogonalization to translate
-//' the degrees of freedom to a penalty term.
-//'
-//' @param XtX [\code{matrix}]\cr
-//'   Square matrix calculated by $X^TW^TWX$, where $X$ is the design matrix, and
-//'   $W$ the diagonal matrix where the diagonal includes the weights.
-//' @param penalty_mat [\code{matrix}]\cr
-//'   Penalization matrix used for model fitting.
-//' @param degrees_of_freedom [\code{numeric(1)}]\cr
-//'   Degrees of freedom to convert to the penalty term.
-//' @return \code{numeric(1)} Penalty term which corresponds to the given degrees of freedom.
-//' @examples
-//' X = cbind(1, iris$Petal.Length, iris$Sepal.Length)
-//' weights = rep(1, nrow(iris))
-//' pen = penaltyMat(ncol(X), 2)
-//' XtX = t(X) %*% t(diag(weights)) %*% diag(weights) %*% X
-//' 
-//' demmlerReinsch(XtX, pen, 2)
-//' @export
-// [[Rcpp::export]]
-
+double demmlerReinsch (const arma::mat& XtX, const arma::mat& penalty_mat, const double& degrees_of_freedom)
 {
   const double eps = 1e-9;
-  // const int XtX_rank = arma::rank(XtX);
 
-  // if (df > XtX_rank) {
-  //   Rcpp::stop(\"Degrees of freedom has to be smaller than the rank of the design matrix.\");
-  // }
-  // if (df == XtX_rank) {
-  //   Rcpp::warning(\"Degrees of freedom matches rank of matrix, hence lambda is set to 0.\");
-  // }
   arma::mat cholesky = arma::chol(XtX + penalty_mat * eps);
   arma::mat cholesky_inv = arma::inv(cholesky);
 

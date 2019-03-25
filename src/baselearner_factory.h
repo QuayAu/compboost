@@ -50,6 +50,7 @@
 #include "data.h"
 #include "splines.h"
 #include "tensors.h"
+#include "demmler_reinsch.h"
 
 namespace blearnerfactory {
 
@@ -150,6 +151,9 @@ private:
   
   /// 
   arma::mat penalty_mat;
+  
+  /// DF for demmler reinsch
+  double df;
 
   /// Flag if sparse matrices should be used:
   const bool use_sparse_matrices;
@@ -159,11 +163,11 @@ public:
   /// Default constructor of class `PSplineBleanrerFactory`
   BaselearnerPSplineFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>,
     const unsigned int&, const unsigned int&, const double&,
-    const unsigned int&, const bool&);
+    const unsigned int&, const unsigned int&, const bool&);
   
   BaselearnerPSplineFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>,
     arma::field<arma::mat>, const unsigned int&, const unsigned int&, const double&,
-    const unsigned int&, const bool&);
+    const unsigned int&, const unsigned int&, const bool&);
   
   /// Create new `BaselearnerPSpline` object
   std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);

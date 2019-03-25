@@ -295,13 +295,14 @@ arma::mat BaselearnerPolynomialFactory::getPenalty () const
 
 BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearner_type0,
   std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0, const unsigned int& degree,
-  const unsigned int& n_knots, const double& penalty, const unsigned int& differences,
+  const unsigned int& n_knots, const double& penalty, const unsigned int& differences, const unsigned int& df,
   const bool& use_sparse_matrices)
   : degree ( degree ),
     n_knots ( n_knots ),
     penalty ( penalty ),
     differences ( differences ),
-    use_sparse_matrices ( use_sparse_matrices )
+    use_sparse_matrices ( use_sparse_matrices ),
+    df ( df )
 {
   blearner_type = blearner_type0;
   // Set data, data identifier and the data_mat (dense at this stage)
@@ -320,11 +321,12 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
     ::Rf_error( "c++ exception (unknown reason)" );
   }
   
+  // Additionally set the penalty matrix:
+  penalty_mat = splines::penaltyMat(n_knots + (degree + 1), differences);
+  
   // Initialize knots:
   data_target->knots = splines::createKnots(data_source->getData(), n_knots, degree);
 
-  // Additionally set the penalty matrix:
-  penalty_mat = penalty * splines::penaltyMat(n_knots + (degree + 1), differences);
 
   // Make sure that the data identifier is setted correctly:
   data_target->setDataIdentifier(data_source->getDataIdentifier());
@@ -336,22 +338,29 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
   //     affects how the training in baselearner.cpp is done. Nevertheless, this speed up things dramatically.
   if (use_sparse_matrices) {
     data_target->sparse_data_mat = splines::createSparseSplineBasis (data_source->getData(), degree, data_target->knots).t();
-    data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty_mat);
-  } else {
-    data_target->setData(instantiateData(data_source->getData()));
-    data_target->XtX_inv = arma::inv(data_target->getData().t() * data_target->getData() + penalty_mat);
+    // calculate lambda if df != 0
+    if(df == 0){
+      data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty * penalty_mat);
+    } else{
+      arma::mat XtX = arma::mat(data_target->sparse_data_mat * data_target->sparse_data_mat.t());
+      penalty_mat = penalty_mat / penalty;
+      double penalty_DR = demrei::demmlerReinsch(XtX, penalty_mat, df);
+      Rcpp::Rcout << "Lambda = " << penalty_DR << " determined by df = " << df << " through DR" << std::endl;
+      data_target->XtX_inv = arma::inv(XtX + penalty_DR * penalty_mat);
+    }
   }
 }
 
 BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearner_type0,
   std::shared_ptr<data::Data> data_source0, std::shared_ptr<data::Data> data_target0,
   arma::field<arma::mat> grid_mat0, const unsigned int& degree, const unsigned int& n_knots, 
-  const double& penalty, const unsigned int& differences, const bool& use_sparse_matrices)
+  const double& penalty, const unsigned int& differences, const unsigned int& df, const bool& use_sparse_matrices)
   : degree ( degree ),
     n_knots ( n_knots ),
     penalty ( penalty ),
     differences ( differences ),
-    use_sparse_matrices ( use_sparse_matrices )
+    use_sparse_matrices ( use_sparse_matrices ),
+    df ( df )
 {
   blearner_type = blearner_type0;
   // Set data, data identifier and the data_mat (dense at this stage)
@@ -474,9 +483,17 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
   // Set penalty matrix to new format
   // cols are now rows!!
   penalty_mat = penalty * splines::penaltyMat(data_target->sparse_data_mat.n_rows, differences);
-  
-  data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty_mat);
-  
+
+  if(df == 0){
+    data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty_mat);
+    } else{
+      arma::mat XtX = arma::mat(data_target->sparse_data_mat * data_target->sparse_data_mat.t());
+      penalty_mat = penalty_mat / penalty;
+      double penalty_DR = demrei::demmlerReinsch(XtX, penalty_mat, df);
+      Rcpp::Rcout << "Lambda = " << penalty_DR << " determined by df = " << df << " through DR" << std::endl;
+      data_target->XtX_inv = arma::inv(XtX + penalty_DR * penalty_mat);
+  }
+
 }
 
 
