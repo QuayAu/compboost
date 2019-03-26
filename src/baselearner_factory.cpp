@@ -672,6 +672,7 @@ BaselearnerCenteredFactory::BaselearnerCenteredFactory (const std::string& blear
   // calculate new design matrix and Design Matrix
   std::map<std::string, arma::mat>  center_res = tensors::centerDesignMatrix(bl1_mat, bl1_pen, bl2_mat);
   arma::mat blc_mat = center_res["X"];
+  // FIXME this might be the wrong penalty mat???
   arma::mat penalty_mat = center_res["P"];
   Z = center_res["Z"];
   
