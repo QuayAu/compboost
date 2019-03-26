@@ -322,7 +322,7 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
   }
   
   // Additionally set the penalty matrix:
-  penalty_mat = splines::penaltyMat(n_knots + (degree + 1), differences);
+  penalty_mat = penalty * splines::penaltyMat(n_knots + (degree + 1), differences);
   
   // Initialize knots:
   data_target->knots = splines::createKnots(data_source->getData(), n_knots, degree);
@@ -340,7 +340,7 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
     data_target->sparse_data_mat = splines::createSparseSplineBasis (data_source->getData(), degree, data_target->knots).t();
     // calculate lambda if df != 0
     if(df == 0){
-      data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty * penalty_mat);
+      data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty_mat);
     } else{
       arma::mat XtX = arma::mat(data_target->sparse_data_mat * data_target->sparse_data_mat.t());
       penalty_mat = penalty_mat / penalty;
