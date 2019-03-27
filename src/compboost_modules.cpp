@@ -305,7 +305,7 @@ public:
   }
   
   BaselearnerPolynomialFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target,
-    arma::field<arma::mat> grid_mat, Rcpp::List arg_list)
+    arma::field<arma::mat> grid_mat, arma::mat time_penalty, Rcpp::List arg_list)
   {
     // Match defaults with custom arguments:
     internal_arg_list = helper::argHandler(internal_arg_list, arg_list, TRUE);
@@ -316,7 +316,7 @@ public:
     std::string blearner_type_temp = internal_arg_list["id_fac"];
     
     sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPolynomialFactory>(blearner_type_temp, data_source.getDataObj(),
-      data_target.getDataObj(), grid_mat, internal_arg_list["degree"], internal_arg_list["intercept"]);
+      data_target.getDataObj(), grid_mat, time_penalty, internal_arg_list["degree"], internal_arg_list["intercept"]);
   }
 
   void summarizeFactory ()
@@ -455,13 +455,13 @@ public:
   }
 
   BaselearnerPSplineFactoryWrapper (DataWrapper& data_source, DataWrapper& data_target,
-    arma::field<arma::mat> grid_mat, Rcpp::List arg_list)
+    arma::field<arma::mat> grid_mat, arma::mat time_penalty, Rcpp::List arg_list)
   {
     internal_arg_list = helper::argHandler(internal_arg_list, arg_list, TRUE);
     std::string blearner_type_temp = internal_arg_list["id_fac"];
 
     sh_ptr_blearner_factory = std::make_shared<blearnerfactory::BaselearnerPSplineFactory>(blearner_type_temp, data_source.getDataObj(),
-      data_target.getDataObj(),grid_mat, internal_arg_list["degree"], internal_arg_list["n_knots"],
+      data_target.getDataObj(),grid_mat, time_penalty, internal_arg_list["degree"], internal_arg_list["n_knots"],
       internal_arg_list["penalty"], internal_arg_list["differences"], internal_arg_list["df"], TRUE);
   }
   
@@ -474,6 +474,11 @@ public:
     Rcpp::Rcout << "Spline factory of degree" << " " << std::to_string(degree) << std::endl;
     Rcpp::Rcout << "\t- Name of the used data: " << sh_ptr_blearner_factory->getDataIdentifier() << std::endl;
     Rcpp::Rcout << "\t- Factory creates the following base-learner: " << sh_ptr_blearner_factory->getBaselearnerType() << std::endl;
+  }
+  
+  arma::mat getPenaltyMat () const
+  {
+    return std::static_pointer_cast<blearnerfactory::BaselearnerPSplineFactory>(sh_ptr_blearner_factory)->penalty_mat;
   }
 };
 
@@ -1104,7 +1109,7 @@ RCPP_MODULE (baselearner_factory_module)
   class_<BaselearnerPolynomialFactoryWrapper> ("BaselearnerPolynomial")
     .derives<BaselearnerFactoryWrapper> ("Baselearner")
     .constructor<DataWrapper&, DataWrapper&, Rcpp::List> ()
-    .constructor<DataWrapper&, DataWrapper&, arma::field<arma::mat>, Rcpp::List> ()
+    .constructor<DataWrapper&, DataWrapper&, arma::field<arma::mat>, arma::mat, Rcpp::List> ()
 
     .method("summarizeFactory", &BaselearnerPolynomialFactoryWrapper::summarizeFactory, "Summarize Factory")
   ;
@@ -1112,9 +1117,10 @@ RCPP_MODULE (baselearner_factory_module)
   class_<BaselearnerPSplineFactoryWrapper> ("BaselearnerPSpline")
     .derives<BaselearnerFactoryWrapper> ("Baselearner")
     .constructor<DataWrapper&, DataWrapper&, Rcpp::List> ()
-    .constructor<DataWrapper&, DataWrapper&, arma::field<arma::mat>, Rcpp::List> ()
+    .constructor<DataWrapper&, DataWrapper&, arma::field<arma::mat>, arma::mat, Rcpp::List> ()
 
     .method("summarizeFactory", &BaselearnerPSplineFactoryWrapper::summarizeFactory, "Summarize Factory")
+    .method("getPenaltyMat", &BaselearnerPSplineFactoryWrapper::getPenaltyMat, "Get the penalty matrix")
   ;
 
   class_<BaselearnerTargetOnlyFactoryWrapper> ("BaselearnerTargetOnly")

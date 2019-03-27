@@ -108,7 +108,7 @@ public:
     const bool&);
   
   BaselearnerPolynomialFactory (const std::string, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>, 
-    arma::field<arma::mat>, const unsigned int&, const bool&);
+    arma::field<arma::mat>, arma::mat, const unsigned int&, const bool&);
 
   std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
   
@@ -119,6 +119,7 @@ public:
   
   /// Get penalty matrix used for modelling
   arma::mat getPenalty() const;
+  arma::mat time_penalty;
 
   arma::mat instantiateData (const arma::mat&) const;
 };
@@ -149,8 +150,7 @@ private:
   /// Order of differences used for penalty matrix
   const unsigned int differences;
   
-  /// 
-  arma::mat penalty_mat;
+
   
   /// DF for demmler reinsch
   double df;
@@ -166,13 +166,18 @@ public:
     const unsigned int&, const unsigned int&, const bool&);
   
   BaselearnerPSplineFactory (const std::string&, std::shared_ptr<data::Data>, std::shared_ptr<data::Data>,
-    arma::field<arma::mat>, const unsigned int&, const unsigned int&, const double&,
+    arma::field<arma::mat>, arma::mat, const unsigned int&, const unsigned int&, const double&,
     const unsigned int&, const unsigned int&, const bool&);
   
   /// Create new `BaselearnerPSpline` object
   std::shared_ptr<blearner::Baselearner> createBaselearner (const std::string&);
   
   arma::field<arma::mat> grid_mat;
+  
+  /// 
+  arma::mat penalty_mat;
+  
+  arma::mat time_penalty;
 
   /// Get data used for modelling
   arma::mat getData() const;

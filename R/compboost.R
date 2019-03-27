@@ -334,11 +334,11 @@ Compboost = R6::R6Class("Compboost",
     grid_mat = NULL,
     stop_if_all_stoppers_fulfilled = FALSE,
     initialize = function(data, target, optimizer = OptimizerCoordinateDescent$new(), loss, learning_rate = 0.05, oob_fraction = NULL, 
-      time_spline_pars = list(degree = 3, n_knots = 25)) {
+      time_spline_pars = list(degree = 3, n_knots = 25, lambda = 0, differences = 2)) {
       checkmate::assertDataFrame(data, any.missing = FALSE, min.rows = 1)
       checkmate::assertNumeric(learning_rate, lower = 0, upper = 1, any.missing = FALSE, len = 1)
       checkmate::assertNumeric(oob_fraction, lower = 0, upper = 1, any.missing = FALSE, len = 1, null.ok = TRUE)
-
+      
       if (! isRcppClass(target, "Response")) {
         if (! target %in% names(data)) {
           stop ("The target ", target, " is not present within the data")
@@ -379,6 +379,7 @@ Compboost = R6::R6Class("Compboost",
       
       
       if (! is.null(oob_fraction)) {
+        # FIXME functionl extraction
         private$oob_idx = sample(x = seq_len(nrow(data)), size = floor(oob_fraction * nrow(data)), replace = FALSE)
       }
       private$train_idx = setdiff(seq_len(nrow(data)), private$oob_idx)
@@ -411,6 +412,7 @@ Compboost = R6::R6Class("Compboost",
         blt_source = InMemoryData$new(as.matrix(self$response$getGrid()[1,]), "")
         blt_target = InMemoryData$new()
         private$time_spline = BaselearnerPSpline$new(blt_source, blt_target, time_spline_pars)
+        private$time_penalty = private$time_spline$getPenaltyMat()
         
         self$grid_mat = list(private$time_spline$getData())
       }
@@ -426,6 +428,7 @@ Compboost = R6::R6Class("Compboost",
         blt_source = InMemoryData$new(matrix(as.vector(unlist(grids)), ncol = 1), "")
         blt_target = InMemoryData$new()
         private$time_spline = BaselearnerPSpline$new(g_source, g_target, time_spline_pars)
+        private$time_penalty = private$getPenalty()
         
         for(g in 1:length(grids)){
           grid_mats[[g]] = private$time_spline$transformData(matrix(grids[[g]], ncol = 1))
@@ -467,10 +470,10 @@ Compboost = R6::R6Class("Compboost",
         
         if (ncol(data_columns) == 1 && !is.numeric(data_columns[, 1])) {
           private$addSingleCatBl(data_columns, feature, id, id_fac, bl_factory,
-            data_source, data_target, self$grid_mat, ...)
+            data_source, data_target, self$grid_mat, private$time_penalty, ...)
         }	else {
           private$addSingleNumericBl(data_columns, feature, id, id_fac, bl_factory,
-            data_source, data_target, self$grid_mat, ...)
+            data_source, data_target, self$grid_mat, private$time_penalty, ...)
         }
        
       } else {
@@ -860,6 +863,7 @@ Compboost = R6::R6Class("Compboost",
     oob_idx = NULL,
     train_idx = NULL,
     time_spline = NULL,
+    time_penalty = NULL,
     initializeModel = function() {
 
       private$logger_list = LoggerList$new()
@@ -889,7 +893,7 @@ Compboost = R6::R6Class("Compboost",
       if(class(self$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
         # Call Constructer with grid_mat in FDA case
         private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target,
-          self$grid_mat, dots)
+          self$grid_mat, private$time_penalty, dots)
       } else{
         private$bl_list[[id]]$factory = bl_factory$new(private$bl_list[[id]]$source, private$bl_list[[id]]$target,
          dots)
@@ -909,9 +913,15 @@ Compboost = R6::R6Class("Compboost",
 
         cat_feat_id = paste(feature, lvl, id_fac, sep = "_")
 
-        private$addSingleNumericBl(data_columns = as.matrix(as.integer(data_column == lvl)),
-          feature = paste(feature, lvl, sep = "_"), id_fac = id_fac,
-          id = cat_feat_id, bl_factory, data_source, data_target, ...)
+        if(class(self$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
+            private$addSingleNumericBl(data_columns = as.matrix(as.integer(data_column == lvl)),
+              feature = paste(feature, lvl, sep = "_"), id_fac = id_fac,
+              id = cat_feat_id, bl_factory, data_source, data_target, self$grid_mat, private$time_penalty, ...)
+        } else{
+            private$addSingleNumericBl(data_columns = as.matrix(as.integer(data_column == lvl)),
+              feature = paste(feature, lvl, sep = "_"), id_fac = id_fac,
+              id = cat_feat_id, bl_factory, data_source, data_target, ...)
+        }
 
         # This is important because of:
         #   1. feature in addSingleNumericBl needs to be something like cat_feature_Group1 to define the
