@@ -343,7 +343,7 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
       data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty_mat);
     } else{
       arma::mat XtX = arma::mat(data_target->sparse_data_mat * data_target->sparse_data_mat.t());
-      penalty_mat = penalty_mat / penalty;
+      penalty_mat = penalty_mat / penalty; // reset penalty mat
       double penalty_DR = demrei::demmlerReinsch(XtX, penalty_mat, df);
       penalty_mat = penalty_DR * penalty_mat;
       Rcpp::Rcout << "Lambda = " << penalty_DR << " determined by df = " << df << " through DR" << std::endl;

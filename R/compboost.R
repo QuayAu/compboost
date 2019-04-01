@@ -334,7 +334,7 @@ Compboost = R6::R6Class("Compboost",
     grid_mat = NULL,
     stop_if_all_stoppers_fulfilled = FALSE,
     initialize = function(data, target, optimizer = OptimizerCoordinateDescent$new(), loss, learning_rate = 0.05, oob_fraction = NULL, 
-      time_spline_pars = list(degree = 3, n_knots = 25, lambda = 0, differences = 2)) {
+      time_spline_pars = list(degree = 3, n_knots = 25, penalty = 0, differences = 2)) {
       checkmate::assertDataFrame(data, any.missing = FALSE, min.rows = 1)
       checkmate::assertNumeric(learning_rate, lower = 0, upper = 1, any.missing = FALSE, len = 1)
       checkmate::assertNumeric(oob_fraction, lower = 0, upper = 1, any.missing = FALSE, len = 1, null.ok = TRUE)
@@ -461,10 +461,7 @@ Compboost = R6::R6Class("Compboost",
       if(class(self$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
         
         # FDA case - kronecker each learn with grid baselearner
-        if(bl_factory == BaselearnerPSpline){
-          warning("Functional PSplines are in alpha.")
-        }
-        
+
         data_columns = self$data[, feature, drop = FALSE]
         id_fac = paste(paste(feature, collapse = "_"), id, sep = "_") #USE stringi
         

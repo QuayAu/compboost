@@ -56,9 +56,14 @@ boostLinear = function(data, target, optimizer = OptimizerCoordinateDescent$new(
 	data_source = InMemoryData, data_target = InMemoryData, oob_fraction = NULL) 
 {
 	model = Compboost$new(data = data, target = target, optimizer = optimizer, loss = loss, 
-		learning_rate = learning_rate, oob_fraction = oob_fraction)
-	features = setdiff(colnames(data), target)
-
+		learning_rate = learning_rate, oob_fraction = oob_fraction, time_spline_pars)
+  
+  if(class(model$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
+    features = names(data)
+  } else {
+     features = setdiff(colnames(data), target)
+  }
+ 
 	for (feat in features) {
 		if (is.numeric(data[[feat]])) {
 			model$addBaselearner(feat, "linear", BaselearnerPolynomial, data_source, data_target,

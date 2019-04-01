@@ -60,11 +60,18 @@
 #' @export
 boostSplines = function(data, target, optimizer = OptimizerCoordinateDescent$new(), loss, 
   learning_rate = 0.05, iterations = 100, trace = -1, degree = 3, n_knots = 20, 
-  penalty = 2, differences = 2, data_source = InMemoryData, data_target = InMemoryData, oob_fraction = NULL) 
+  penalty = 2, differences = 2, data_source = InMemoryData, data_target = InMemoryData, oob_fraction = NULL,
+  time_spline_pars = list(n_knots = 3, degree = 3, differences = 2, penalty = 10)) 
 {
   model = Compboost$new(data = data, target = target, optimizer = optimizer, loss = loss, 
-    learning_rate = learning_rate, oob_fraction = oob_fraction)
-  features = setdiff(colnames(data), target)
+    learning_rate = learning_rate, oob_fraction = oob_fraction, time_spline_pars)
+  
+  if(class(model$response)[1] %in% c("Rcpp_ResponseFDA","Rcpp_ResponseFDALong")){
+    features = names(data)
+  } else {
+     features = setdiff(colnames(data), target)
+  }
+ 
 
   # This loop could be replaced with foreach???
   # Issue: 
@@ -80,3 +87,7 @@ boostSplines = function(data, target, optimizer = OptimizerCoordinateDescent$new
   model$train(iterations, trace)
   return(model)
 }
+
+
+
+
