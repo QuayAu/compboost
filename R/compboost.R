@@ -422,13 +422,13 @@ Compboost = R6::R6Class("Compboost",
         # Get all the differing grids from the response
         grids = self$response$getGrid_field()
         grid_mats = list()
-        browser()
+    
         # Now build a single spline (!) from all datapoints
         # we are effectively concatenating and sorting all grids to use all data
-        blt_source = InMemoryData$new(matrix(as.vector(unlist(grids)), ncol = 1), "")
-        blt_target = InMemoryData$new()
+        g_source = InMemoryData$new(matrix(as.vector(unlist(grids)), ncol = 1), "")
+        g_target = InMemoryData$new()
         private$time_spline = BaselearnerPSpline$new(g_source, g_target, time_spline_pars)
-        private$time_penalty = private$getPenalty()
+        private$time_penalty = private$time_spline$getPenaltyMat()
         
         for(g in 1:length(grids)){
           grid_mats[[g]] = private$time_spline$transformData(matrix(grids[[g]], ncol = 1))

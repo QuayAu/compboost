@@ -400,7 +400,7 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
     // sparsify grid
   arma::field<arma::sp_mat> grid_mat_sparse = arma::field<arma::sp_mat>(grid_mat.size());
 
-    for(int i=0; i<grid_mat.size(); i++){
+  for(int i=0; i<grid_mat.size(); i++){
     grid_mat_sparse(i) = arma::sp_mat(grid_mat(i));
   }
   
@@ -481,18 +481,20 @@ BaselearnerPSplineFactory::BaselearnerPSplineFactory (const std::string& blearne
         
         arma::sp_mat vecAsparse = arma::sp_mat(vecA);
         arma::sp_mat vecBsparse = arma::sp_mat(vecB);
-      
+
         // Multiply both kronecker products element-wise
-        out = arma::kron(temp,vecBsparse) % arma::kron(vecAsparse, (grid_mat_sparse(0)));
+        out = arma::kron(temp,vecBsparse) % arma::kron(vecAsparse, (grid_mat_sparse(g)));
         
         
         data_kroned = arma::join_cols(data_kroned, out);
         row_tracker = row_tracker + grid_n;
     }
+
     data_target->sparse_data_mat = data_kroned.t();
   }
   
   penalty_mat = tensors::penaltySumKronecker(time_penalty, penalty_mat);
+
   data_target->XtX_inv = arma::inv(data_target->sparse_data_mat * data_target->sparse_data_mat.t() + penalty_mat);
 
 }
